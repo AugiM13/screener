@@ -798,6 +798,17 @@ button.log.sm.share-btn{background:transparent; color:var(--accent); border:1px 
 
 </details>
 
+<details class="panel fold" open>
+  <summary><h2>Other odds sources <span class="sub">check one player’s price · SportsGameOdds and OddsPapi</span></h2></summary>
+  <p class="hint">BettingPros loads the full Board above. SportsGameOdds currently checks a player price from a small event sample; OddsPapi currently checks the connection only. Choose one source, sport, and player, then press Search source. This does not spend BettingPros calls. These providers do not yet report reliable remaining credits here; the Worker may reuse a recent search for five minutes.</p>
+  <div class="row"><button type="button" class="ghost" id="srcStatusBtn">Check connections</button><span id="srcStatus" class="meta" aria-live="polite">Not checked</span></div>
+  <div class="row"><select id="srcProvider" aria-label="Odds source"><option value="sgo">SportsGameOdds prices</option><option value="oddspapi">OddsPapi connection</option></select>
+    <select id="srcSport" aria-label="Sport"><option>NBA</option><option>NFL</option><option>NHL</option><option>MLB</option><option>NCAAF</option><option>NCAAB</option><option>WNBA</option></select>
+    <input id="srcPlayer" placeholder="Player's full name" aria-label="Player's full name" maxlength="80">
+    <button type="button" class="ghost" id="srcSearch">Search source</button></div>
+  <div id="srcResults" class="hint" aria-live="polite"></div>
+</details>
+
 <div class="panel board-panel">
   <h2 id="boardTitle">The board</h2>
   <div class="psrc-note" id="pasteNote" style="display:none"></div>
@@ -957,16 +968,7 @@ button.log.sm.share-btn{background:transparent; color:var(--accent); border:1px 
 </div>
 
 <div class="view" id="v-settings">
-<details class="panel fold" open>
-  <summary><h2>Extra odds sources <span class="sub">SportsGameOdds · OddsPapi</span></h2></summary>
-  <p class="hint">Keys go in Cloudflare Worker secrets: <code>SPORTSGAMEODDS_API_KEY</code> and <code>ODDSPAPI_API_KEY</code>. Choose one source and one player when you need a second price. Loading the board or building a slip does not call these sources. A recent search may be reused for five minutes.</p>
-  <div class="row"><button type="button" class="ghost" id="srcStatusBtn">Check connections</button><span id="srcStatus" class="meta" aria-live="polite">Not checked</span></div>
-  <div class="row"><select id="srcProvider" aria-label="Odds source"><option value="sgo">SportsGameOdds prices</option><option value="oddspapi">OddsPapi connection</option></select>
-    <select id="srcSport" aria-label="Sport"><option>NBA</option><option>NFL</option><option>NHL</option><option>MLB</option><option>NCAAF</option><option>NCAAB</option><option>WNBA</option></select>
-    <input id="srcPlayer" placeholder="Player's full name" aria-label="Player's full name" maxlength="80">
-    <button type="button" class="ghost" id="srcSearch">Search source</button></div>
-  <div id="srcResults" class="hint" aria-live="polite"></div>
-</details>
+
 <details class="panel fold" id="syncPanel" open>
   <summary><h2>☁ Your bets on every device <span class="sub">phone, other PCs — locked with your own sync password</span></h2></summary>
   <p class="hint">One copy of your bet log lives in your Cloudflare store. Any device with the screener passphrase <b>and</b> this password sees the same bets, baits and settings. Changes upload a few seconds after you make them; other devices pick them up when they open or come back to the page, and once a minute while it's open — Wi-Fi or cellular.</p>
