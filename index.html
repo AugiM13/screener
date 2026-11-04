@@ -955,6 +955,16 @@ button.log.sm.share-btn{background:transparent; color:var(--accent); border:1px 
 </div>
 
 <div class="view" id="v-settings">
+<details class="panel fold" open>
+  <summary><h2>Extra odds sources <span class="sub">SportsGameOdds · OddsPapi</span></h2></summary>
+  <p class="hint">Keys go in Cloudflare Worker secrets: <code>SPORTSGAMEODDS_API_KEY</code> and <code>ODDSPAPI_API_KEY</code>. Choose one source and one player when you need a second price. Loading the board or building a slip does not call these sources. A recent search may be reused for five minutes.</p>
+  <div class="row"><button type="button" class="ghost" id="srcStatusBtn">Check connections</button><span id="srcStatus" class="meta" aria-live="polite">Not checked</span></div>
+  <div class="row"><select id="srcProvider" aria-label="Odds source"><option value="sgo">SportsGameOdds prices</option><option value="oddspapi">OddsPapi connection</option></select>
+    <select id="srcSport" aria-label="Sport"><option>NBA</option><option>NFL</option><option>NHL</option><option>MLB</option><option>NCAAF</option><option>NCAAB</option><option>WNBA</option></select>
+    <input id="srcPlayer" placeholder="Player's full name" aria-label="Player's full name" maxlength="80">
+    <button type="button" class="ghost" id="srcSearch">Search source</button></div>
+  <div id="srcResults" class="hint" aria-live="polite"></div>
+</details>
 <details class="panel fold" id="syncPanel" open>
   <summary><h2>☁ Your bets on every device <span class="sub">phone, other PCs — locked with your own sync password</span></h2></summary>
   <p class="hint">One copy of your bet log lives in your Cloudflare store. Any device with the screener passphrase <b>and</b> this password sees the same bets, baits and settings. Changes upload a few seconds after you make them; other devices pick them up when they open or come back to the page, and once a minute while it's open — Wi-Fi or cellular.</p>
@@ -1222,8 +1232,11 @@ button.log.sm.share-btn{background:transparent; color:var(--accent); border:1px 
 <details class="panel fold" id="parlayPanel">
   <summary><h2>Add a parlay / Pick 6 <span class="sub">logged and tallied; graded by hand ("how many hit")</span></h2></summary>
   <p class="hint">The screener only prices single bets, so a parlay gets no value check. It counts in that book's slot in the Today ribbon, but not against the screener's daily max.</p>
+  <p class="hint">Mark two or more picks on the Board with <b>Parlay</b>, then build a draft here. The marked picks may come from different books. Choose the app where you will enter the slip, and check each exact line and payout there before logging it.</p>
+  <button class="ghost" type="button" id="plBuild">Build from marked picks</button>
+  <div id="plDraft" class="hint" aria-live="polite"></div>
   <div class="pl-form">
-    <div class="field"><label for="plBook">Book</label><select id="plBook"><option>DraftKings Pick 6</option><option>DraftKings</option><option>DraftKings Predictions</option><option>FanDuel Predicts</option><option>Novig</option><option>Kalshi</option><option>Polymarket</option><option>Underdog Predict</option><option>Other</option></select></div>
+    <div class="field"><label for="plBook">App for this slip</label><select id="plBook"><option>DraftKings Pick 6</option><option>PrizePicks</option><option>Underdog</option><option>Sleeper</option><option>DraftKings</option><option>DraftKings Predictions</option><option>FanDuel Predicts</option><option>Novig</option><option>Kalshi</option><option>Polymarket</option><option>Other</option></select></div>
     <div class="field" style="max-width:90px"><label for="plPicks">Picks</label><input id="plPicks" type="number" min="2" max="12" value="4"></div>
     <div class="field" style="max-width:110px"><label for="plStake">Stake $</label><input id="plStake" type="number" step="0.01" min="0" placeholder="5.00"></div>
     <div class="field"><label for="plAll">Pays if all hit $</label><input id="plAll" type="number" step="0.01" min="0" placeholder="50.00"></div>
@@ -2627,6 +2640,26 @@ function toggleParlay(r){
   if(k) delete parlays[k]; else parlays[matchKey(r)]={name:r.name, market:r.market, at:Date.now()};
   saveParlays(); refresh();
 }
+
+document.getElementById('plBuild').addEventListener('click',()=>{
+  const draft=document.getElementById('plDraft');
+  const picks=(lastRows||[]).filter(r=>inParlay(r));
+  if(picks.length<2){ draft.textContent='Mark at least two Board picks with Parlay first.'; return; }
+  const books=[...new Set(picks.map(r=>r.book))];
+  if(picks.some(r=>r.gameInfo?.state==='in' || r.gameInfo?.state==='post' || liveState(r)!=='open')){
+    draft.textContent='At least one marked game has started or closed. Remove it from the draft before continuing.';
+    return;
+  }
+  const book=books.length===1?books[0]:null;
+  const bookSelect=document.getElementById('plBook');
+  if(book && [...bookSelect.options].some(option=>option.value===book)) bookSelect.value=book;
+  document.getElementById('plPicks').value=picks.length;
+  document.getElementById('plLegs').value=picks.map(r=>[r.name,r.side,r.market,fmtOdds(r.offeredRaw)].filter(Boolean).join(' ')).join(' | ');
+  document.getElementById('plAll').value='';
+  document.getElementById('plM1').value='';
+  document.getElementById('plM2').value='';
+  draft.textContent=picks.length+' legs from '+books.map(bookLabel).join(', ')+' added below. Choose one app and confirm that every exact leg is offered there. Enter its real payout before logging a placed slip.';
+});
 
 function undoBet(r, tr){
   if(!r.prior) return;
@@ -4802,7 +4835,7 @@ document.getElementById('filterCoverMin').addEventListener('change', (e)=>{ filt
    parse() produces, then runs the same audit()/render()/attachGameInfo()
    pipeline the paste box uses. Nothing about scoring/screening logic here —
    this only replaces where `rows` comes from. */
-const API_BASE = 'https://props-api.agustinmagana24.workers.dev';   // ← SETUP.md step 6: paste your Worker's address here (no slash at the end)
+const API_BASE = 'https://props-api.agustinmagana24.workers.dev';
 /* v3.16 (Bestie #7): on Cloudflare's free plan one Worker request may make 50 outside calls, and finding a Novig game line
    on a busy NFL Sunday can take ~30 of them. So every /live request that mixes Novig game lines with other bets is split:
    the other bets together, each Novig game line on its own (3 at a time), answers merged back as one. Every caller
@@ -4897,6 +4930,30 @@ function apiHeaders(){
   let pass=''; try{ pass=localStorage.getItem('mbev.pass')||''; }catch(e){}
   return pass ? {'x-screener-pass':pass} : {};
 }
+document.getElementById('srcStatusBtn').addEventListener('click',async()=>{
+  const out=document.getElementById('srcStatus'); out.textContent='Checking…';
+  try{ const r=await fetch(API_BASE+'/sources/status',{headers:apiHeaders()}); const j=await r.json();
+    if(!r.ok) throw new Error(j.error||'Worker did not respond');
+    out.textContent='SportsGameOdds: '+(j.sportsGameOdds?.configured?'configured':'add key')+' · OddsPapi: '+(j.oddsPapi?.configured?'configured':'add key');
+  }catch(e){out.textContent='Could not check: '+e.message;}
+});
+document.getElementById('srcSearch').addEventListener('click',async()=>{
+  const button=document.getElementById('srcSearch'); if(button.disabled)return;
+  const out=document.getElementById('srcResults'), provider=document.getElementById('srcProvider').value;
+  const player=document.getElementById('srcPlayer').value.trim(), sport=document.getElementById('srcSport').value;
+  if(player.length<3){out.textContent='Enter a full player name first.';return;}
+  out.textContent='Checking source…'; button.disabled=true;
+  try{
+    const q=new URLSearchParams({provider,sport,player}), r=await fetch(API_BASE+'/sources/search?'+q,{headers:apiHeaders()});
+    const j=await r.json(); if(!r.ok) throw new Error(j.error||j.note||'Source returned an error');
+    out.replaceChildren(); const note=document.createElement('p'); note.textContent=(j.reused?'Recent result (no new provider call). ':'')+(j.note||''); out.append(note);
+    if(j.matches?.length){ const list=document.createElement('ul');
+      for(const m of j.matches){ const li=document.createElement('li'); li.textContent=[m.player,m.stat,m.side,m.line,m.book,m.odds,m.updated?'updated '+m.updated:''].filter(Boolean).join(' · '); list.append(li); }
+      out.append(list); }
+    else if(provider==='sgo'){const p=document.createElement('p');p.textContent='No matching player in this sample of '+j.scannedEvents+' events. Try another sport or check the provider directly.';out.append(p);}
+  }catch(e){out.textContent='Source check failed: '+e.message;}
+  finally{button.disabled=false;}
+});
 async function apiGet(path){
   const res=await fetch(API_BASE+path, {headers:apiHeaders()});
   let data=null; try{ data=await res.json(); }catch(e){}
