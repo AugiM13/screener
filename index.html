@@ -831,6 +831,7 @@ button.log.sm.share-btn{background:transparent; color:var(--accent); border:1px 
     <input type="text" id="filterPlayer" class="bar-search" placeholder="Search player or team…" aria-label="Search player or team">
     <label class="bar-check"><input type="checkbox" id="swOnly"> Only sweet spot</label>
     <label class="bar-check"><input type="checkbox" id="showRejects"> Show rejected</label>
+    <label class="bar-check" title="High-cover rows skipped only for a low single payout; full slip payout still needs review"><input type="checkbox" id="parlayOnly"> Parlay candidates</label>
     <label class="bar-check"><input type="checkbox" id="onlyMyGames"> Only games I already bet</label>
     <button type="button" class="ghost sm" id="shopBtn" title="La Contadora re-checks every bet on this board — passing and skipped — at live Kalshi, Polymarket US and Novig prices (no BettingPros calls). Fair value stays from your last Pull.">🦑 Send the Sentinels</button><span class="meta" id="shopMsg"></span>
     <label class="bar-check"><input type="checkbox" id="notesAll"> Show all notes</label>
@@ -950,11 +951,22 @@ button.log.sm.share-btn{background:transparent; color:var(--accent); border:1px 
     <span class="meta" id="liveStamp"></span>
   </div>
   <p class="hint" style="margin:8px 0 0">On each bar, <b>green</b> is where the stat needs to finish and <b>red</b> is where the bet loses. The white bar is where it is now; ▲ is the <b>projection</b> (stat so far + the line × the part of the game left — rough: it can't see injuries, blowouts or overtime). Win %, cover % and over % are ESPN's live numbers, for ESPN's line. A cash-out offer shows its <b>break-even %</b>: keep the bet only if you think it wins more often than that.</p>
+  <div id="liveDraft" style="margin-top:12px"></div>
   <div id="liveBody" style="margin-top:12px"></div>
 </div>
 </div>
 
 <div class="view" id="v-settings">
+<details class="panel fold" open>
+  <summary><h2>Extra odds sources <span class="sub">SportsGameOdds · OddsPapi</span></h2></summary>
+  <p class="hint">Keys go in Cloudflare Worker secrets: <code>SPORTSGAMEODDS_API_KEY</code> and <code>ODDSPAPI_API_KEY</code>. Choose one source and one player when you need a second price. Loading the board or building a slip does not call these sources. A recent search may be reused for five minutes.</p>
+  <div class="row"><button type="button" class="ghost" id="srcStatusBtn">Check connections</button><span id="srcStatus" class="meta" aria-live="polite">Not checked</span></div>
+  <div class="row"><select id="srcProvider" aria-label="Odds source"><option value="sgo">SportsGameOdds prices</option><option value="oddspapi">OddsPapi connection</option></select>
+    <select id="srcSport" aria-label="Sport"><option>NBA</option><option>NFL</option><option>NHL</option><option>MLB</option><option>NCAAF</option><option>NCAAB</option><option>WNBA</option></select>
+    <input id="srcPlayer" placeholder="Player's full name" aria-label="Player's full name" maxlength="80">
+    <button type="button" class="ghost" id="srcSearch">Search source</button></div>
+  <div id="srcResults" class="hint" aria-live="polite"></div>
+</details>
 <details class="panel fold" id="syncPanel" open>
   <summary><h2>☁ Your bets on every device <span class="sub">phone, other PCs — locked with your own sync password</span></h2></summary>
   <p class="hint">One copy of your bet log lives in your Cloudflare store. Any device with the screener passphrase <b>and</b> this password sees the same bets, baits and settings. Changes upload a few seconds after you make them; other devices pick them up when they open or come back to the page, and once a minute while it's open — Wi-Fi or cellular.</p>
@@ -1222,10 +1234,14 @@ button.log.sm.share-btn{background:transparent; color:var(--accent); border:1px 
 <details class="panel fold" id="parlayPanel">
   <summary><h2>Add a parlay / Pick 6 <span class="sub">logged and tallied; graded by hand ("how many hit")</span></h2></summary>
   <p class="hint">The screener only prices single bets, so a parlay gets no value check. It counts in that book's slot in the Today ribbon, but not against the screener's daily max.</p>
+  <p class="hint">Mark two or more picks on the Board with <b>Parlay</b>, then build a draft here. The marked picks may come from different books. Choose the app where you will enter the slip, and check each exact line and payout there before logging it.</p>
+  <button class="ghost" type="button" id="plBuild">Build from marked picks</button>
+  <div id="plDraft" class="hint" aria-live="polite"></div>
   <div class="pl-form">
-    <div class="field"><label for="plBook">Book</label><select id="plBook"><option>DraftKings Pick 6</option><option>DraftKings</option><option>DraftKings Predictions</option><option>FanDuel Predicts</option><option>Novig</option><option>Kalshi</option><option>Polymarket</option><option>Underdog Predict</option><option>Other</option></select></div>
+    <div class="field"><label for="plBook">App for this slip</label><select id="plBook"><option>DraftKings Pick 6</option><option>PrizePicks</option><option>Underdog</option><option>Sleeper</option><option>DraftKings</option><option>DraftKings Predictions</option><option>FanDuel Predicts</option><option>Novig</option><option>Kalshi</option><option>Polymarket</option><option>Other</option></select></div>
     <div class="field" style="max-width:90px"><label for="plPicks">Picks</label><input id="plPicks" type="number" min="2" max="12" value="4"></div>
     <div class="field" style="max-width:110px"><label for="plStake">Stake $</label><input id="plStake" type="number" step="0.01" min="0" placeholder="5.00"></div>
+    <div class="field" style="max-width:110px"><label for="plMult">Shown multiplier ×</label><input id="plMult" type="number" step="0.01" min="0" placeholder="optional"></div>
     <div class="field"><label for="plAll">Pays if all hit $</label><input id="plAll" type="number" step="0.01" min="0" placeholder="50.00"></div>
     <div class="field"><label for="plM1">…if 1 misses $</label><input id="plM1" type="number" step="0.01" min="0" placeholder="optional"></div>
     <div class="field"><label for="plM2">…if 2 miss $</label><input id="plM2" type="number" step="0.01" min="0" placeholder="optional"></div>
@@ -1975,7 +1991,7 @@ function render(rows,cfg){
   const tb=document.getElementById('tbody'), empty=document.getElementById('emptyMsg');
   tb.innerHTML='';
   const passing=rows.filter(r=>r.pass);
-  let shown=showRejects?rows.slice():passing.slice();
+  let shown=parlayOnly?rows.filter(r=>parlayCandidate(r,cfg)):(showRejects?rows.slice():passing.slice());
   const isStarted=r=>{ const s=liveState(r); return s==='started'||s==='closed'; };
   // v2.86: two boards from one audit — ALREADY BET, one-per-player, game caps and the daily max are shared
   const pv=boardSrc==='paste';
@@ -2187,7 +2203,7 @@ function render(rows,cfg){
     const r=lastRows.find(x=>x.idx===+btn.dataset.idx); if(r && r.prior) openBetEditor(btn.closest('tr, .pcard'), rowFromBet(r.prior), {edit:r.prior});
   }));
   bothQ('button.parlay-btn').forEach(btn=>btn.addEventListener('click',()=>{
-    const r=lastRows.find(x=>x.idx===+btn.dataset.idx); if(r) toggleParlay(r);
+    const r=lastRows.find(x=>x.idx===+btn.dataset.idx); if(r) startParlayDraft(r);
   }));
   tb.querySelectorAll('button.bet-undo').forEach(btn=>btn.addEventListener('click',()=>{
     const r=lastRows.find(x=>x.idx===+btn.dataset.idx); if(r) undoBet(r, btn.closest('tr'));
@@ -2627,6 +2643,46 @@ function toggleParlay(r){
   if(k) delete parlays[k]; else parlays[matchKey(r)]={name:r.name, market:r.market, at:Date.now()};
   saveParlays(); refresh();
 }
+function startParlayDraft(seed){
+  if(liveState(seed)!=='open') return;
+  if(!inParlay(seed)) parlays[matchKey(seed)]={name:seed.name, market:seed.market, at:Date.now()};
+  const marked=(lastRows||[]).filter(r=>inParlay(r) && liveState(r)==='open');
+  if(marked.length<2){
+    const companion=(lastRows||[]).filter(r=>r!==seed && !inParlay(r) && r.sport===seed.sport && r.game!==seed.game &&
+      liveState(r)==='open' && (r.pass || parlayCandidate(r,cfgRead())) && r.fairProb!=null)
+      .sort((a,b)=>(b.fairProb||0)-(a.fairProb||0))[0];
+    if(companion) parlays[matchKey(companion)]={name:companion.name, market:companion.market, at:Date.now()};
+  }
+  saveParlays();refresh();
+  const tab=document.querySelector('.tab[data-view="v-log"]');if(tab) tab.click();
+  const panel=document.getElementById('parlayPanel');if(panel){panel.open=true;panel.scrollIntoView({behavior:'smooth',block:'start'});}
+  document.getElementById('plBuild').click();
+  if((lastRows||[]).filter(r=>inParlay(r)).length<2) document.getElementById('plDraft').textContent='This pick is marked. Choose one more open Board pick to complete the draft.';
+}
+
+let builtParlayLegs=[];
+document.getElementById('plBuild').addEventListener('click',()=>{
+  const draft=document.getElementById('plDraft');
+  const picks=(lastRows||[]).filter(r=>inParlay(r));
+  builtParlayLegs=[];
+  if(picks.length<2){ draft.textContent='Mark at least two Board picks with Parlay first.'; return; }
+  const books=[...new Set(picks.map(r=>r.book))];
+  if(picks.some(r=>r.gameInfo?.state==='in' || r.gameInfo?.state==='post' || liveState(r)!=='open')){
+    draft.textContent='At least one marked game has started or closed. Remove it from the draft before continuing.';
+    return;
+  }
+  const book=books.length===1?books[0]:null;
+  const bookSelect=document.getElementById('plBook');
+  if(book && [...bookSelect.options].some(option=>option.value===book)) bookSelect.value=book;
+  builtParlayLegs=picks.map(r=>({name:r.name,market:r.market,side:r.side,sport:r.sport,game:r.game}));
+  document.getElementById('plPicks').value=picks.length;
+  document.getElementById('plLegs').value=picks.map(r=>[r.name,r.side,r.market,fmtOdds(r.offeredRaw)].filter(Boolean).join(' ')).join(' | ');
+  document.getElementById('plAll').value='';
+  document.getElementById('plMult').value='';
+  document.getElementById('plM1').value='';
+  document.getElementById('plM2').value='';
+  draft.textContent=picks.length+' legs from '+books.map(bookLabel).join(', ')+' added below. Choose one app and confirm that every exact leg is offered there. Enter its real payout before logging a placed slip.';
+});
 
 function undoBet(r, tr){
   if(!r.prior) return;
@@ -4024,11 +4080,41 @@ function liveBoxScoreHtml(g){
       }).join('')+'</div>'; }).join('');
   return html+'</div>';
 }
+async function renderDraftLive(force){
+  const out=document.getElementById('liveDraft'); if(!out) return;
+  const legs=(lastRows||[]).filter(r=>inParlay(r)).slice(0,12);
+  if(!legs.length){out.innerHTML='';return;}
+  const sports=[...new Set(legs.map(r=>r.sport).filter(s=>ESPN_MAP[s]))];
+  await Promise.all(sports.map(fetchScoreboard));
+  const groups=new Map();
+  for(const r of legs){
+    const ev=findGame(scoreboardCache[r.sport]||[],r.game)||findGameAny(scoreboardCache[r.sport]||[],r.game,r.name,r.matchup);
+    const key=ev?r.sport+':'+ev.id:r.sport+':'+r.game;
+    if(!groups.has(key)) groups.set(key,{ev,rows:[],sport:r.sport});
+    groups.get(key).rows.push(r);
+  }
+  let html='<h3>Marked parlay legs · ESPN game view</h3><p class="hint">Live stats are for checking your draft. Verify the exact app line; no BettingPros calls are used here.</p>';
+  for(const g of groups.values()){
+    const ev=g.ev, st=ev?.status?.type?.state||'pre';
+    const label=ev?gameStatusOf(ev):null;
+    let box=null;
+    if(ev && st!=='pre') try{box=await fetchBoxscore(g.sport,ev.id)}catch(e){}
+    html+='<div class="lgame st-'+esc(st)+'"><div class="lg-bets">'+esc(g.rows[0].game||'Game')+' · '+esc(ev?.status?.type?.shortDetail||'No live matchup')+'</div>';
+    for(const r of g.rows){
+      const stat=box?statForMarket(box,r.name,r.market,r.sport):null;
+      const graded=st==='post'?gradeRow(r,box):null;
+      html+='<div class="lbet"><div class="who"><b>'+esc(r.name)+'</b><span class="lbl">'+esc(r.side+' '+r.market)+'</span></div><div class="lstat">'+(stat==null?'Stat not available':('Current '+esc(stat)))+' · '+(graded?(graded.won?'HIT':'MISS'):(st==='post'?'Needs review':'Pending'))+'</div></div>';
+    }
+    html+='</div>';
+  }
+  out.innerHTML=html;
+}
 async function renderLive(force){
   const body=document.getElementById('liveBody'); if(!body) return;
   if(liveBusy){ liveAgain=true; return; }
   liveBusy=true; logBusy++; liveLastRun=Date.now();
   try{
+    await renderDraftLive(force);
     const bets=liveOpenBets();
     if(!bets.length){ body.innerHTML='<div class="empty" style="display:block">No open bets in today\'s games. Bets show here from the day of the game until they settle.</div>'; return; }
     const sports=[...new Set(bets.map(b=>b.sport).filter(s=>ESPN_MAP[s]))];
@@ -4667,6 +4753,16 @@ function paintSortArrows(){
 }
 let filterSport = '';
 let showRejects = false;
+let parlayOnly = false;
+function parlayCandidate(r,cfg){
+  if(!r || r.prior || r.hiddenDup || r.removed || r.moved || r.samePlayer || r.glConflict || r.stale) return false;
+  if(liveState(r)!=='open' || r.fairProb==null || r.fairProb<0.55 || !(r.net>0)) return false;
+  const flags=r.flags||[];
+  const lowPayout=(Number.isFinite(r.amer) && r.amer<cfg.oMin) || flags.some(f=>/stake under .* minimum|whole contracts come to .* under .* minimum/i.test(f[1]||''));
+  const otherBlock=flags.some(f=>f[0]==='out' && !(Number.isFinite(r.amer) && r.amer<cfg.oMin && /odds outside/i.test(f[1]||'')));
+  const riskBlock=flags.some(f=>/game cap|daily max|one per player|outlier|risk-bet limit|same game|no edge/i.test(f[1]||''));
+  return lowPayout && !otherBlock && !riskBlock;
+}
 
 // Comprehensive filter state
 let filterPlayer = '';
@@ -4776,6 +4872,7 @@ document.querySelectorAll('#boardHead th.sortable').forEach(th=>th.addEventListe
 }));
 document.getElementById('filterSport').addEventListener('change', (e)=>{ filterSport=e.target.value; rerenderWithFilters(); });
 document.getElementById('showRejects').addEventListener('change', (e)=>{ showRejects=e.target.checked; rerenderWithFilters(); });
+document.getElementById('parlayOnly').addEventListener('change', e=>{ parlayOnly=e.target.checked; rerenderWithFilters(); });
 document.getElementById('onlyMyGames').addEventListener('change', e=>{ filterCorrOnly=e.target.checked; refresh(); });
 
 // Event listeners for advanced filters
@@ -4802,7 +4899,7 @@ document.getElementById('filterCoverMin').addEventListener('change', (e)=>{ filt
    parse() produces, then runs the same audit()/render()/attachGameInfo()
    pipeline the paste box uses. Nothing about scoring/screening logic here —
    this only replaces where `rows` comes from. */
-const API_BASE = 'https://props-api.agustinmagana24.workers.dev';   // ← SETUP.md step 6: paste your Worker's address here (no slash at the end)
+const API_BASE = 'https://props-api.agustinmagana24.workers.dev';
 /* v3.16 (Bestie #7): on Cloudflare's free plan one Worker request may make 50 outside calls, and finding a Novig game line
    on a busy NFL Sunday can take ~30 of them. So every /live request that mixes Novig game lines with other bets is split:
    the other bets together, each Novig game line on its own (3 at a time), answers merged back as one. Every caller
@@ -4897,6 +4994,30 @@ function apiHeaders(){
   let pass=''; try{ pass=localStorage.getItem('mbev.pass')||''; }catch(e){}
   return pass ? {'x-screener-pass':pass} : {};
 }
+document.getElementById('srcStatusBtn').addEventListener('click',async()=>{
+  const out=document.getElementById('srcStatus'); out.textContent='Checking…';
+  try{ const r=await fetch(API_BASE+'/sources/status',{headers:apiHeaders()}); const j=await r.json();
+    if(!r.ok) throw new Error(j.error||'Worker did not respond');
+    out.textContent='SportsGameOdds: '+(j.sportsGameOdds?.configured?'configured':'add key')+' · OddsPapi: '+(j.oddsPapi?.configured?'configured':'add key');
+  }catch(e){out.textContent='Could not check: '+e.message;}
+});
+document.getElementById('srcSearch').addEventListener('click',async()=>{
+  const button=document.getElementById('srcSearch'); if(button.disabled)return;
+  const out=document.getElementById('srcResults'), provider=document.getElementById('srcProvider').value;
+  const player=document.getElementById('srcPlayer').value.trim(), sport=document.getElementById('srcSport').value;
+  if(player.length<3){out.textContent='Enter a full player name first.';return;}
+  out.textContent='Checking source…'; button.disabled=true;
+  try{
+    const q=new URLSearchParams({provider,sport,player}), r=await fetch(API_BASE+'/sources/search?'+q,{headers:apiHeaders()});
+    const j=await r.json(); if(!r.ok) throw new Error(j.error||j.note||'Source returned an error');
+    out.replaceChildren(); const note=document.createElement('p'); note.textContent=(j.reused?'Recent result (no new provider call). ':'')+(j.note||''); out.append(note);
+    if(j.matches?.length){ const list=document.createElement('ul');
+      for(const m of j.matches){ const li=document.createElement('li'); li.textContent=[m.player,m.stat,m.side,m.line,m.book,m.odds,m.updated?'updated '+m.updated:''].filter(Boolean).join(' · '); list.append(li); }
+      out.append(list); }
+    else if(provider==='sgo'){const p=document.createElement('p');p.textContent='No matching player in this sample of '+j.scannedEvents+' events. Try another sport or check the provider directly.';out.append(p);}
+  }catch(e){out.textContent='Source check failed: '+e.message;}
+  finally{button.disabled=false;}
+});
 async function apiGet(path){
   const res=await fetch(API_BASE+path, {headers:apiHeaders()});
   let data=null; try{ data=await res.json(); }catch(e){}
@@ -5529,10 +5650,23 @@ document.getElementById('checkResults').addEventListener('click', async ()=>{
 async function checkResultsRun(){
   const btn=document.getElementById('checkResults'); const was=btn.textContent;
   btn.textContent='Checking…'; btn.disabled=true;
-  const sports=[...new Set(logged.map(b=>b.sport).filter(s=>ESPN_MAP[s]))];
+  const sports=[...new Set(logged.flatMap(b=>b.kind==='parlay'?(b.parlay?.legsData||[]).map(x=>x.sport):[b.sport]).filter(s=>ESPN_MAP[s]))];
   await Promise.all(sports.map(fetchScoreboard));
   for(const b of logged){
-    if(b.sold || b.kind==='parlay') continue;   // a cashed-out bet keeps its sale result; parlays are graded by hand
+    if(b.sold) continue;
+    if(b.kind==='parlay'){
+      const P=b.parlay||{}, legs=P.legsData||[];if(legs.length!==P.picks || !legs.length || P.payout!=null) continue;
+      let hits=0, pending=false, unknown=false;
+      for(const leg of legs){
+        const ev=findGame(scoreboardCache[leg.sport]||[],leg.game)||findGameAny(scoreboardCache[leg.sport]||[],leg.game,leg.name);
+        if(!ev || gameStatusOf(ev)?.state!=='post'){pending=true;continue}
+        const box=await fetchBoxscore(leg.sport,ev.id,true);
+        const g=gradeRow(leg,box);if(!g){unknown=true;continue}if(g.won) hits++;
+      }
+      if(pending || unknown){b.result=unknown?'?':'pending';continue}
+      P.hits=hits;P.payout=hits===legs.length?(+P.pays?.all||0):hits===legs.length-1?(+P.pays?.m1||0):hits===legs.length-2?(+P.pays?.m2||0):0;
+      b.result=P.payout>+b.stake?'win':P.payout===+b.stake?'push':'loss';continue;
+    }
     const gl=GL_KINDS.test(b.kind||'');
     let ev=findGame(scoreboardCache[b.sport], b.game);
     if(!ev && gl) ev=findGameAny(scoreboardCache[b.sport], b.game, b.name);   // v2.59: "NO-PIT" style games
@@ -5742,7 +5876,7 @@ document.getElementById('todayBar').addEventListener('click',e=>{ const eb=e.tar
 (function(){ const d=document.getElementById('plDay'); if(d) d.value=ctDay(Date.now()); })();
 document.getElementById('plAdd').addEventListener('click',()=>{
   const v=id=>parseFloat(document.getElementById(id).value), msg=document.getElementById('plMsg');
-  const book=document.getElementById('plBook').value, picks=Math.round(v('plPicks')), stake=v('plStake'), all=v('plAll');
+  const book=document.getElementById('plBook').value, picks=Math.round(v('plPicks')), stake=v('plStake'), mult=v('plMult'), all=v('plAll')>0?v('plAll'):(stake>0 && mult>1?stake*mult:NaN);
   if(!(picks>=2)){ msg.textContent='Picks: 2 or more.'; return; }
   if(!(stake>0) || !(all>stake)){ msg.textContent='Enter the stake and what it pays if all hit (more than the stake).'; return; }
   const day=document.getElementById('plDay').value||ctDay(Date.now()), legs=document.getElementById('plLegs').value.trim();
@@ -5750,10 +5884,10 @@ document.getElementById('plAdd').addEventListener('click',()=>{
   logged.push({ id:(self.crypto&&crypto.randomUUID)?crypto.randomUUID():('p'+Date.now()), kind:'parlay', date:day, start:null,
     name:(book==='DraftKings Pick 6'?'Pick 6':'Parlay')+' · '+picks+' picks', sport:'PARLAY', market:picks+'-pick parlay', betnow:picks+' picks',
     book, odds:fmtOdds(Math.round(americanOf(stake/all))), fair:'', stake:+stake.toFixed(2), result:'pending', closing:'',
-    parlay:{picks, legs, pays:{all:+all.toFixed(2), m1:m1>0?+m1.toFixed(2):0, m2:m2>0?+m2.toFixed(2):0}, hits:null, payout:null},
+    parlay:{picks, legs, legsData:builtParlayLegs.length===picks?builtParlayLegs.map(x=>({...x})):[], pays:{all:+all.toFixed(2), m1:m1>0?+m1.toFixed(2):0, m2:m2>0?+m2.toFixed(2):0}, hits:null, payout:null},
     snap:{at:new Date().toISOString(), screener:SCREENER_VERSION, said:{decision:'PARLAY', onList:false}} });
-  saveLog(); renderLog(); renderPerf();
-  ['plStake','plAll','plM1','plM2','plLegs'].forEach(id=>document.getElementById(id).value='');
+  builtParlayLegs=[];saveLog(); renderLog(); renderPerf();
+  ['plStake','plMult','plAll','plM1','plM2','plLegs'].forEach(id=>document.getElementById(id).value='');
   msg.textContent='Added — grade it in the log with "how many hit".';
 });
 (function(){ const cb=document.getElementById('dkGroup'); if(!cb) return; cb.checked=dkGrouped();
@@ -6196,14 +6330,27 @@ new MutationObserver(()=>_markGo()).observe(document.body,{childList:true,subtre
    becomes the row's price (better or worse), the board re-screens it, and rows that cross over are tagged:
    🔓 out of Skipping Jail · 🔒 sent to Skipping Jail. Fair value (cover %, consensus) stays from the last Pull. */
 const isPlace=r=>!!(r.pass && r.stake>0 && !r.prior && !r.removed && !r.moved && !r.glConflict);
+function cleanParlayMarks(changedRows){
+  let removed=0;
+  for(const r of lastRows||[]){
+    const key=parlayKeyOf(r);
+    if(key && (liveState(r)!=='open' || (changedRows&&changedRows.has(r)))){ delete parlays[key];removed++; }
+  }
+  if(removed){ builtParlayLegs=[];saveParlays();for(const id of ['plLegs','plAll','plMult']){const field=document.getElementById(id);if(field)field.value='';}const count=document.getElementById('plPicks');if(count)count.value=0;const draft=document.getElementById('plDraft');
+    if(draft) draft.textContent=removed+' marked leg'+(removed===1?'':'s')+' removed after Sentinels: game started/closed or price changed. Build the slip again with current lines.';
+    refresh();
+  }
+  return removed;
+}
 async function shopExchanges(){
   const btn=document.getElementById('shopBtn'), msg=document.getElementById('shopMsg'); if(!btn) return;
+  cleanParlayMarks();
   const cfg=cfgRead(), have=cfg.books&&cfg.books.length?cfg.books:null;
   const exch=['Kalshi','Polymarket US','Novig'].filter(n=>!have || have.some(b=>n.toLowerCase().includes(b)||b.includes(n.split(' ')[0].toLowerCase())));
   const started=r=>r.gameInfo&&(r.gameInfo.state==='in'||r.gameInfo.state==='post');
   const rows=lastRows.filter(r=>r.fairProb!=null && !r.prior && !started(r) && !r.hiddenDup && (boardSrc==='paste'?isPasteRow(r):!isPasteRow(r)));
   const jobs=[]; rows.forEach(r=>{ exch.forEach(n=>{ const d=liveDesc(Object.assign(rowAsBet(r),{book:n, id:'shop:'+r.idx+':'+LIVE_BOOK(n)})); if(d) jobs.push([r,n,d]); }); });
-  if(!jobs.length){ msg.textContent='🦑 nothing for the Sentinels to hunt'; return; }
+  if(!jobs.length){ msg.textContent='🦑 nothing for the Sentinels to hunt · expired parlay marks cleared'; return; }
   btn.disabled=true; let matched=0;
   const before=new Map(rows.map(r=>[r, isPlace(r)]));
   try{
@@ -6215,7 +6362,7 @@ async function shopExchanges(){
       const R=((await res.json())||{}).results||{};
       chunk.forEach(([r,n,d])=>{ const q=R[d.id]; if(!q||!q.ok) return; if(suspectQ(q,r.fairProb,r.offeredProb,r.mktProb)){ (r._suspect=r._suspect||{})[n]=q; return; } matched++; liveQuotes[d.id]=q; (r._shopQ=r._shopQ||{})[n]=q; });
     }
-    let repriced=0;
+    let repriced=0;const changedRows=new Set();
     rows.forEach(r=>{
       const orig=r.shop?r.shop.orig:{book:r.book, offeredRaw:r.offeredRaw, offeredProb:r.offeredProb};
       const netAt=(book,p)=>{ const f=feeRate(book,p,cfg.fees); return ((r.fairProb/p-1)-f)/(1+f); };
@@ -6225,15 +6372,16 @@ async function shopExchanges(){
                      : {book:orig.book, p:orig.offeredProb, net:netAt(orig.book,orig.offeredProb), live:false};
       Object.entries(Q).forEach(([n,q])=>{ if(n===own) return; const nt=netAt(n,q.price); if(nt>best.net+0.003) best={book:n,p:q.price,net:nt,live:true}; });
       const changed = best.book!==orig.book || Math.abs(best.p-orig.offeredProb)>1e-6;
-      if(changed){ repriced++; r.shop={orig, live:best.live, same:best.book===orig.book, at:new Date().toISOString()};
+      if(changed){ repriced++; changedRows.add(r);r.shop={orig, live:best.live, same:best.book===orig.book, at:new Date().toISOString()};
         r.book=best.book; r.offeredProb=best.p; r.offeredRaw=fmtOdds(Math.round(americanOf(best.p))); }
       else if(r.shop){ r.book=orig.book; r.offeredProb=orig.offeredProb; r.offeredRaw=orig.offeredRaw; delete r.shop; }
     });
     refresh();   // the board re-screens every row at its new price (fees, floor, odds range, market check, caps, daily max)
+    const removedMarks=cleanParlayMarks(changedRows);
     let freed=0, jailed=0;
     rows.forEach(r=>{ const was=before.get(r), now=isPlace(r); if(!was && now){ r.freed=true; freed++; } else if(was && !now){ r.jailed=true; jailed++; } });
     refresh();
-    msg.innerHTML='🦑 Sentinels are back: <b>'+matched+'</b> live prices · <b>'+repriced+'</b> repriced'+(freed?' · <b style="color:var(--live)">🔓 '+freed+' out of Skipping Jail</b>':'')+(jailed?' · <b style="color:var(--out)">🔒 '+jailed+' sent to Skipping Jail</b>':'')+' · '+new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+    msg.innerHTML='🦑 Sentinels are back: <b>'+matched+'</b> live prices · <b>'+repriced+'</b> repriced'+(freed?' · <b style="color:var(--live)">🔓 '+freed+' out of Skipping Jail</b>':'')+(jailed?' · <b style="color:var(--out)">🔒 '+jailed+' sent to Skipping Jail</b>':'')+(removedMarks?' · '+removedMarks+' parlay legs need review':'')+' · '+new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
   }catch(e){ msg.textContent='🦑 the Sentinels got lost (exchange check failed)'; }
   finally{ btn.disabled=false; }
 }
