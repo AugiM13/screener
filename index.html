@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Prop Screener v3.20</title>
+<title>Prop Screener v3.21</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -709,6 +709,7 @@ tr.skiprow:hover td>*, tr.skiprow.nopen td>*{opacity:1}
 .dec.dec-same{background:var(--warn-bg); color:var(--warn); border:1.5px solid var(--warn); border-radius:8px; padding:2px 8px; display:inline-block}
 .makes-bar{margin:0 0 10px; padding:8px 12px; border:1px solid var(--warn); background:var(--warn-bg); border-radius:10px; font-size:13.5px; font-weight:700; cursor:pointer}
 button.log.sm.share-btn{background:transparent; color:var(--accent); border:1px solid var(--rule)}   /* v3.10 */
+.src-heading{margin:12px 4px 0}.src-heading b{font-size:17px}.src-heading span{font-size:12px;color:var(--soft)}.src-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 -5px}.src-chip{font:inherit;font-size:12px;color:var(--ink);background:#163a2e;border:1px solid #378c62;border-radius:22px;padding:8px 13px;cursor:pointer}.src-chip.active{outline:2px solid #7dbdff;outline-offset:2px;font-weight:700}.src-chip span{color:var(--soft);font-size:11px;margin-left:4px}.src-chip.active span{color:inherit}#extraLoadline input{font:inherit;font-size:12.5px;background:var(--panel);color:var(--ink);border:1px solid var(--rule);border-radius:6px;padding:6px 8px}#srcResults:empty{display:none}#srcResults:not(:empty){background:var(--panel);border:1px solid var(--rule);border-radius:9px;padding:9px;margin-top:6px}
 </style>
 </head>
 <body>
@@ -717,8 +718,8 @@ button.log.sm.share-btn{background:transparent; color:var(--accent); border:1px 
 <div class="head">
   <div class="head-row">
     <div class="brandbox">
-      <h1>Prop Screener <span class="ver" id="verTag">v3.20</span><button type="button" class="sync-chip" id="syncChip" title="Your bets on every device (Settings)">☁ off</button></h1>
-      <div class="date">Board for <input type="date" id="slate"> <span class="built">· build 22 Sep 2026</span></div>
+      <h1>Prop Screener <span class="ver" id="verTag">v3.21</span><button type="button" class="sync-chip" id="syncChip" title="Your bets on every device (Settings)">☁ off</button></h1>
+      <div class="date">Board for <input type="date" id="slate"> <span class="built">· build 4 Nov 2026</span></div>
     </div>
     <div class="statbox">
       <div class="board-score"><span class="n" id="count">0</span><span class="of" id="countNote">nothing loaded yet</span></div>
@@ -728,7 +729,13 @@ button.log.sm.share-btn{background:transparent; color:var(--accent); border:1px 
   </div>
   <div class="todaybar" id="todayBar" title="Today's games, per book — click for the Bet log"></div>
   <div class="pull-bar" id="pullBar" role="alert"></div>
-  <div class="loadline loadbar">
+  <div class="src-heading"><b>Sources</b> <span>choose one, then check its sport or player</span></div>
+  <div class="src-tabs" role="group" aria-label="Odds source">
+    <button type="button" class="src-chip active" data-odds-source="bp">BettingPros <span id="bpChipBudget">local estimate</span></button>
+    <button type="button" class="src-chip" data-odds-source="sgo">SportsGameOdds <span id="sgoChipStatus">usage unavailable</span></button>
+    <button type="button" class="src-chip" data-odds-source="oddspapi">OddsPapi <span id="papiChipStatus">usage unavailable</span></button>
+  </div>
+  <div class="loadline loadbar" id="bpLoadline">
     <span class="ll-k">BettingPros</span>
     <select id="apiSport" title="Sport">
       <option value="MLB">MLB</option><option value="NFL">NFL</option><option value="NCAAF">NCAAF</option><option value="NBA">NBA</option>
@@ -764,6 +771,18 @@ button.log.sm.share-btn{background:transparent; color:var(--accent); border:1px 
     </span>
     <span class="saved-note" id="savedNote"></span>
   </div>
+  <div class="loadline loadbar" id="extraLoadline" style="display:none">
+    <span class="ll-k" id="extraSourceName">SportsGameOdds</span>
+    <select id="srcProvider" aria-label="Odds source" style="display:none"><option value="sgo">SportsGameOdds</option><option value="oddspapi">OddsPapi</option></select>
+    <select id="srcSport" aria-label="Sport"><option>NBA</option><option>NFL</option><option>NHL</option><option>MLB</option><option>NCAAF</option><option>NCAAB</option><option>WNBA</option></select>
+    <input id="srcPlayer" placeholder="Player’s full name" aria-label="Player’s full name" maxlength="80">
+    <button type="button" class="ghost" id="srcSearch">Search player price</button>
+    <button type="button" class="ghost" id="srcStatusBtn">Check connections</button>
+    <span id="srcStatus" class="meta" aria-live="polite">Not checked</span>
+    <span class="budget" id="extraBudget">Usage not reported</span>
+  </div>
+  <div id="srcResults" class="hint" aria-live="polite"></div>
+  <p class="hint" id="sourceHelp" style="display:none;margin:4px 2px 0"></p>
   <div id="apiStatus" class="ll-status"></div>
   <p class="hint" id="apiWeekHint" style="display:none;margin:4px 2px 0">NFL/NCAAF are organized by week. Week auto-fills from ESPN; leave it blank to let BettingPros use the current week.</p>
   <div class="row" id="passBox" style="display:none;margin-top:8px">
@@ -798,16 +817,7 @@ button.log.sm.share-btn{background:transparent; color:var(--accent); border:1px 
 
 </details>
 
-<details class="panel fold" open>
-  <summary><h2>Other odds sources <span class="sub">check one player’s price · SportsGameOdds and OddsPapi</span></h2></summary>
-  <p class="hint">BettingPros loads the full Board above. SportsGameOdds currently checks a player price from a small event sample; OddsPapi currently checks the connection only. Choose one source, sport, and player, then press Search source. This does not spend BettingPros calls. These providers do not yet report reliable remaining credits here; the Worker may reuse a recent search for five minutes.</p>
-  <div class="row"><button type="button" class="ghost" id="srcStatusBtn">Check connections</button><span id="srcStatus" class="meta" aria-live="polite">Not checked</span></div>
-  <div class="row"><select id="srcProvider" aria-label="Odds source"><option value="sgo">SportsGameOdds prices</option><option value="oddspapi">OddsPapi connection</option></select>
-    <select id="srcSport" aria-label="Sport"><option>NBA</option><option>NFL</option><option>NHL</option><option>MLB</option><option>NCAAF</option><option>NCAAB</option><option>WNBA</option></select>
-    <input id="srcPlayer" placeholder="Player's full name" aria-label="Player's full name" maxlength="80">
-    <button type="button" class="ghost" id="srcSearch">Search source</button></div>
-  <div id="srcResults" class="hint" aria-live="polite"></div>
-</details>
+
 
 <div class="panel board-panel">
   <h2 id="boardTitle">The board</h2>
@@ -1327,7 +1337,7 @@ button.log.sm.share-btn{background:transparent; color:var(--accent); border:1px 
 
 </div>
 <script>
-const SCREENER_VERSION='v3.20';
+const SCREENER_VERSION='v3.21';
 // the header and tab title always show this one number
 document.title='Prop Screener '+SCREENER_VERSION;
 { const t=document.getElementById('verTag'); if(t) t.textContent=SCREENER_VERSION; }
@@ -4996,11 +5006,29 @@ function apiHeaders(){
   let pass=''; try{ pass=localStorage.getItem('mbev.pass')||''; }catch(e){}
   return pass ? {'x-screener-pass':pass} : {};
 }
+
+function setOddsSource(source){
+  document.querySelectorAll('[data-odds-source]').forEach(b=>b.classList.toggle('active',b.dataset.oddsSource===source));
+  document.getElementById('bpLoadline').style.display=source==='bp'?'':'none';
+  document.getElementById('extraLoadline').style.display=source==='bp'?'none':'';
+  document.getElementById('srcResults').style.display=source==='bp'?'none':'';
+  const papi=source==='oddspapi';document.getElementById('srcProvider').value=papi?'oddspapi':'sgo';
+  document.getElementById('extraSourceName').textContent=papi?'OddsPapi':'SportsGameOdds';
+  for(const id of ['srcSport','srcPlayer','srcSearch'])document.getElementById(id).style.display=papi?'none':'';
+  const help=document.getElementById('sourceHelp');help.style.display=source==='bp'?'none':'';
+  help.textContent=papi?'OddsPapi currently verifies its connection only; full player-market loading is not wired yet. Usage balance is not reported.':'SportsGameOdds checks one player’s price in a small event sample. This does not load the full Board or spend BettingPros calls. Usage balance is not reported.';
+}
+document.querySelectorAll('[data-odds-source]').forEach(b=>b.addEventListener('click',()=>setOddsSource(b.dataset.oddsSource)));
+const bpBudget=document.getElementById('apiBudget'),bpChip=document.getElementById('bpChipBudget');
+new MutationObserver(()=>{bpChip.textContent=bpBudget.textContent.replace(/^Local estimate:\s*/,'')||'local estimate';}).observe(bpBudget,{childList:true,subtree:true,characterData:true});
+bpChip.textContent=bpBudget.textContent.replace(/^Local estimate:\s*/,'')||'local estimate';
 document.getElementById('srcStatusBtn').addEventListener('click',async()=>{
   const out=document.getElementById('srcStatus'); out.textContent='Checking…';
   try{ const r=await fetch(API_BASE+'/sources/status',{headers:apiHeaders()}); const j=await r.json();
     if(!r.ok) throw new Error(j.error||'Worker did not respond');
     out.textContent='SportsGameOdds: '+(j.sportsGameOdds?.configured?'configured':'add key')+' · OddsPapi: '+(j.oddsPapi?.configured?'configured':'add key');
+    document.getElementById('sgoChipStatus').textContent=j.sportsGameOdds?.configured?'on · usage unavailable':'add key';
+    document.getElementById('papiChipStatus').textContent=j.oddsPapi?.configured?'on · usage unavailable':'add key';
   }catch(e){out.textContent='Could not check: '+e.message;}
 });
 document.getElementById('srcSearch').addEventListener('click',async()=>{
