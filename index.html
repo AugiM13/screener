@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Augi Screener v0.7.2 — Original Engine</title>
+<title>Augi Screener v0.7.3 — Original Engine</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -684,10 +684,25 @@ tr.skiprow:hover td>*, tr.skiprow.nopen td>*{opacity:1}
 .sync-status{font-size:13.5px; margin:10px 0 0} .sync-status.ok b{color:var(--live)} .sync-status.err{color:var(--warn); font-weight:600}
 #syncPanel code{font-size:12px; background:var(--rail); padding:1px 5px; border-radius:4px}
 
-.slip-builder{margin:12px 0; border-color:#396bba; background:#101f38}
+.slip-builder{margin:12px 0; border-color:var(--rule); background:var(--panel)}
 .pl-selected{display:grid;gap:6px;margin:10px 0}
 .pl-leg{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 10px;border:1px solid var(--rule);border-radius:9px}
 .pl-leg span{min-width:0}
+.pl-leg[class*="cover-band-"]{border-left:5px solid var(--cover-color);background:var(--cover-bg)}
+.pl-leg .pl-detail{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.cover-legend{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 12px}
+.cover-chip{display:inline-block;padding:2px 8px;border:1px solid var(--cover-color);border-radius:999px;background:var(--cover-bg);color:var(--cover-color);font-size:11px;font-weight:800;white-space:nowrap}
+.cover-band-1{--cover-color:#9a3412;--cover-bg:#fff0e8}
+.cover-band-2{--cover-color:#854d0e;--cover-bg:#fef9df}
+.cover-band-3{--cover-color:#075985;--cover-bg:#e5f5fc}
+.cover-band-4{--cover-color:#166534;--cover-bg:#e7f8ec}
+:root[data-theme="dark"] .cover-band-1{--cover-color:#ffab82;--cover-bg:#38221d}
+:root[data-theme="dark"] .cover-band-2{--cover-color:#facc66;--cover-bg:#332b19}
+:root[data-theme="dark"] .cover-band-3{--cover-color:#7dd3fc;--cover-bg:#173342}
+:root[data-theme="dark"] .cover-band-4{--cover-color:#86efac;--cover-bg:#173626}
+#v-parlay-drafts #parlayPanel[class*="cover-band-"]{border:2px solid var(--cover-color)}
+button.log.parlay[class*="cover-band-"]{border-color:var(--cover-color);color:var(--cover-color)}
+button.log.parlay.on[class*="cover-band-"]{background:var(--cover-bg);color:var(--cover-color)}
 .pl-extra{width:100%;border-top:1px solid var(--rule);padding-top:8px}
 .pl-extra summary{cursor:pointer;color:var(--soft)}
 /* v3.04: what the slip should show, on the card · passphrase check */
@@ -737,7 +752,7 @@ button.log.sm.share-btn{background:transparent; color:var(--accent); border:1px 
 <div class="head">
   <div class="head-row">
     <div class="brandbox">
-      <h1>Augi Screener <span class="ver" id="verTag">v0.7.2</span><button type="button" class="sync-chip" id="syncChip" title="Your bets on every device (Settings)">☁ off</button></h1>
+      <h1>Augi Screener <span class="ver" id="verTag">v0.7.3</span><button type="button" class="sync-chip" id="syncChip" title="Your bets on every device (Settings)">☁ off</button></h1>
       <div class="date">Board for <input type="date" id="slate"> <span class="built">· kit screening and stake calculation</span></div>
     </div>
     <div class="statbox">
@@ -895,6 +910,8 @@ button.log.sm.share-btn{background:transparent; color:var(--accent); border:1px 
 <details class="panel fold slip-builder" id="parlayPanel" style="display:none">
   <summary><h2>Slip builder <span class="sub" id="plCount">0 legs</span></h2></summary>
   <p class="hint">Choose each pick yourself with the Board’s <b>Parlay</b> button. This is a draft until you place it in an app and log the actual payout.</p>
+  <p class="hint">Colors show each leg’s projected cover chance, not the chance the full parlay wins.</p>
+  <div class="cover-legend" aria-label="Parlay leg cover ranges"><span class="cover-chip cover-band-1">45–54%</span><span class="cover-chip cover-band-2">55–64%</span><span class="cover-chip cover-band-3">65–74%</span><span class="cover-chip cover-band-4">75–80%</span></div>
   <div id="plSelectedLegs" class="pl-selected" aria-live="polite"></div>
   <div id="plDraft" class="hint" aria-live="polite"></div>
   <button class="ghost" type="button" id="plBuild">Review selected legs</button>
@@ -1379,7 +1396,7 @@ button.log.sm.share-btn{background:transparent; color:var(--accent); border:1px 
 
 </div>
 <script>
-const SCREENER_VERSION='v0.7.2';
+const SCREENER_VERSION='v0.7.3';
 // Stake presentation retained from Augi Odds Board. This NEVER changes internal dollars or EV.
 let augiStakeMode='units', augiUnitDollar=2.5;
 try{
@@ -2209,7 +2226,7 @@ function render(rows,cfg){
     const oaTag = r.oddsApi===undefined ? '' : r.oddsApi===null
       ? '<span class="tag t-warn">Market: not found</span>'
       : '<span class="tag t-live">Market: '+esc(fmtOdds(String(r.oddsApi.price)))+' ('+esc(r.oddsApi.book)+')</span>';
-    const pTag = (inParlay(r) ? '<span class="tag t-parlay">IN PARLAY</span>' : '')+
+    const pTag = (inParlay(r) ? '<span class="tag t-parlay">IN PARLAY</span> '+parlayCoverChip(r) : '')+
       (r.src==='paste:mev' ? '<span class="tag t-live" title="From the pasted Market Based EV page. BettingPros\' number is before fees.">Market EV page: '+(r.screenerEV!=null?(r.screenerEV>=0?'+':'')+r.screenerEV+'%':'')+'</span>'
        : r.mktSharp ? '<span class="tag t-live" title="This bet is also on the pasted Market EV page; its sharp fair price is used as the market check.">also on Market EV page'+(r.sharpEV!=null?' ('+(r.sharpEV>=0?'+':'')+r.sharpEV+'%)':'')+'</span>' : '');
     const cTag = r.mktNet==null ? '' : '<span class="tag '+(r.mktNet>0?'t-live':'t-warn')+'" title="This price against the market\'s no-vig price, after fees">'+
@@ -2261,10 +2278,10 @@ function render(rows,cfg){
         '<div class="btnrow">'+(r.prior
           ? '<button class="log sm undo bet-undo" data-idx="'+r.idx+'">Undo bet</button><button class="log sm bet-edit" data-idx="'+r.idx+'">Edit</button>'
           : (isPlace(r) && liveState(r)==='open' ? '<button class="log sm bet-btn" data-idx="'+r.idx+'" title="Record this bet after placing it in your app">I placed this · Log</button>' : '<span class="meta">Not a passing single</span>'))+
-          (inParlay(r)||parlayCandidate(r,cfg)?'<button class="log sm parlay'+(inParlay(r)?' on':'')+' parlay-btn" data-idx="'+r.idx+'" title="Add or remove this 45%–80% cover leg from your draft slip">'+
+          (inParlay(r)||parlayCandidate(r,cfg)?'<button class="log sm parlay cover-band-'+parlayCoverBand(r)+(inParlay(r)?' on':'')+' parlay-btn" data-idx="'+r.idx+'" title="Add or remove this '+pct(r.fairProb)+' cover leg from your draft slip">'+
           (inParlay(r)?'Remove from slip ✓':'Parlay')+'</button>':'')+'</div></td>';
     cells.fee='<td class="num">'+(r.fee===undefined?'—':(r.fee?'−'+pct(r.fee):'—'))+'</td>';
-    cells.stake='<td class="num">'+(parlayLeg?'<span class="tag t-live">PARLAY LEG</span><div class="meta">Single: '+(isPlace(r)?'eligible':'skip')+'</div>':decisionHtml(r,cfg))+
+    cells.stake='<td class="num">'+(parlayLeg?parlayCoverChip(r)+'<div class="meta">Parlay leg · Single: '+(isPlace(r)?'eligible':'skip')+'</div>':decisionHtml(r,cfg))+
         (r.stake&&r.mktProb!=null&&r.blendProb!=null?'<div class="meta" title="Probability used for sizing: market blended with the model">sized at '+pct(r.blendProb)+'</div>':'')+
         (r.stake&&r.contracts?'<div class="meta">'+r.contracts+'xC</div>':'')+'</td>';
     tr.innerHTML=BOARD_COLS.map(c=>cells[c]).join('');
@@ -2376,8 +2393,8 @@ function placeCardHtml(r,cfg,o){
       pcCell('Projection','<div class="pc-big">'+(r.projValue!=null?(Math.round(r.projValue*10)/10):'—')+'</div><span class="pc-s">'+esc(mname)+'</span>')+
       pcCell('EV after fees','<div class="pc-big '+(r.net>0?'up':'down')+'">'+ev+'</div><span class="pc-s">'+(r.fairProb!=null?pct(r.fairProb)+' cover':'')+(bp?' · '+bp:'')+'</span>')+
       pcCell('Rating','<div class="pc-stars">'+(nS==null?'—':'★'.repeat(nS)+'<span>'+'★'.repeat(5-nS)+'</span>')+'</div><span class="pc-s">'+(nS==null?'no rating':nS+'-star')+'</span>')+
-      pcCell('Screener', (parlayOnly&&parlayCandidate(r,cfg)?'<span class="tag t-live">PARLAY LEG</span><div class="meta">Single: '+(isPlace(r)?'eligible':'skip')+'</div>':decisionHtml(r,cfg))+'<div class="pc-btns">'+(isPlace(r) && liveState(r)==='open' ? '<button class="log sm bet-btn" data-idx="'+r.idx+'" title="Record this bet after placing it in your app">I placed this · Log</button>' : '<span class="meta">Not a passing single</span>')+
-        (inParlay(r)||parlayCandidate(r,cfg)?'<button class="log sm parlay'+(inParlay(r)?' on':'')+' parlay-btn" data-idx="'+r.idx+'" title="Add or remove this 45%–80% cover leg from your draft slip">'+(inParlay(r)?'Remove from slip ✓':'Parlay')+'</button>':'')+
+      pcCell('Screener', (parlayOnly&&parlayCandidate(r,cfg)?parlayCoverChip(r)+'<div class="meta">Parlay leg · Single: '+(isPlace(r)?'eligible':'skip')+'</div>':decisionHtml(r,cfg))+'<div class="pc-btns">'+(isPlace(r) && liveState(r)==='open' ? '<button class="log sm bet-btn" data-idx="'+r.idx+'" title="Record this bet after placing it in your app">I placed this · Log</button>' : '<span class="meta">Not a passing single</span>')+
+        (inParlay(r)||parlayCandidate(r,cfg)?'<button class="log sm parlay cover-band-'+parlayCoverBand(r)+(inParlay(r)?' on':'')+' parlay-btn" data-idx="'+r.idx+'" title="Add or remove this '+pct(r.fairProb)+' cover leg from your draft slip">'+(inParlay(r)?'Remove from slip ✓':'Parlay')+'</button>':'')+
         '<button class="log sm share-btn" data-idx="'+r.idx+'" title="Send this bet to someone — with the same link the logo opens: the slip with the side, line and the screener stake filled in (they can change it). Your bankroll, EV and log do not go with it.">📤 Share</button></div>')+
     '</div>'+
     (o.nTags?'<div class="pc-foot"><button class="ntog" data-nkey="'+esc(o.nKey)+'" aria-expanded="'+o.nOpen+'" title="Show or hide the notes for this bet"><span class="dot '+o.worst+'"></span>'+(o.nOpen?'▾ ':'▸ ')+o.nTags+' note'+(o.nTags===1?'':'s')+'</button>'+(o.nOpen?'<div class="tags">'+o.tags+'</div>':'')+'</div>':'')+
@@ -2737,15 +2754,28 @@ function parlayKeyOf(r){
   return Object.keys(parlays).find(k=>k.endsWith(tail) && Date.now()-(parlays[k].at||0)<36*3600e3) || null;
 }
 function inParlay(r){ return !!parlayKeyOf(r); }
+function parlayCoverBand(r){
+  const p=r&&r.fairProb;
+  if(p==null || p<0.45 || p>0.80) return 0;
+  const shown=Math.round(p*1000)/10; // same one-decimal percentage shown on the chip
+  return shown<55 ? 1 : shown<65 ? 2 : shown<75 ? 3 : 4;
+}
+function parlayCoverChip(r){
+  const band=parlayCoverBand(r);
+  return band?'<span class="cover-chip cover-band-'+band+'" title="Projected cover for this leg">'+pct(r.fairProb)+' cover</span>':'';
+}
 function renderParlayTray(rows){
   const panel=document.getElementById('parlayPanel'), box=document.getElementById('plSelectedLegs');
   if(!panel || !box) return;
   const picks=(rows||[]).filter(inParlay);
   panel.style.display='block';
+  panel.classList.remove('cover-band-1','cover-band-2','cover-band-3','cover-band-4');
+  if(picks.length){ const lowest=Math.min(...picks.map(r=>r.fairProb==null?0:r.fairProb));
+    const band=parlayCoverBand({fairProb:lowest}); if(band) panel.classList.add('cover-band-'+band); }
   const tabCounter=document.getElementById('plTabN');
   if(tabCounter) tabCounter.textContent=String(picks.length);
   document.getElementById('plCount').textContent=picks.length+' leg'+(picks.length===1?'':'s');
-  box.innerHTML=picks.map(r=>'<div class="pl-leg"><span><b>'+esc(r.name)+'</b> · '+esc(r.side||'')+' '+esc(r.market)+' · '+esc(r.sport||'')+' · '+esc(bookLabel(r.book)||r.book||'')+'</span><button type="button" class="ghost sm" data-idx="'+r.idx+'">Remove</button></div>').join('');
+  box.innerHTML=picks.map(r=>'<div class="pl-leg cover-band-'+parlayCoverBand(r)+'"><span class="pl-detail"><b>'+esc(r.name)+'</b> · '+esc(r.side||'')+' '+esc(r.market)+' · '+esc(r.sport||'')+' · '+esc(bookLabel(r.book)||r.book||'')+' '+parlayCoverChip(r)+'</span><button type="button" class="ghost sm" data-idx="'+r.idx+'">Remove</button></div>').join('');
   box.querySelectorAll('button').forEach(btn=>btn.addEventListener('click',()=>{
     const r=(lastRows||[]).find(x=>x.idx===+btn.dataset.idx);
     if(r) startParlayDraft(r);
