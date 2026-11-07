@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Prop Screener v3.21</title>
+<title>Augi Screener v0.7.2 — Original Engine</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@600;700&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -683,6 +683,13 @@ tr.skiprow:hover td>*, tr.skiprow.nopen td>*{opacity:1}
 .sync-chip.ok{color:var(--live); border-color:var(--live)} .sync-chip.err{color:var(--warn); border-color:var(--warn)}
 .sync-status{font-size:13.5px; margin:10px 0 0} .sync-status.ok b{color:var(--live)} .sync-status.err{color:var(--warn); font-weight:600}
 #syncPanel code{font-size:12px; background:var(--rail); padding:1px 5px; border-radius:4px}
+
+.slip-builder{margin:12px 0; border-color:#396bba; background:#101f38}
+.pl-selected{display:grid;gap:6px;margin:10px 0}
+.pl-leg{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 10px;border:1px solid var(--rule);border-radius:9px}
+.pl-leg span{min-width:0}
+.pl-extra{width:100%;border-top:1px solid var(--rule);padding-top:8px}
+.pl-extra summary{cursor:pointer;color:var(--soft)}
 /* v3.04: what the slip should show, on the card · passphrase check */
 .pp{display:block; margin-top:4px; font-size:12.5px; font-weight:800} .pp.ok{color:var(--live)} .pp.no{color:var(--out)}
 .pp-sub{display:block; font-size:10.5px; color:var(--soft)} .pp-sub b.up{color:var(--live)} .pp-sub b.down{color:var(--out)}
@@ -710,6 +717,18 @@ tr.skiprow:hover td>*, tr.skiprow.nopen td>*{opacity:1}
 .makes-bar{margin:0 0 10px; padding:8px 12px; border:1px solid var(--warn); background:var(--warn-bg); border-radius:10px; font-size:13.5px; font-weight:700; cursor:pointer}
 button.log.sm.share-btn{background:transparent; color:var(--accent); border:1px solid var(--rule)}   /* v3.10 */
 .src-heading{margin:12px 4px 0}.src-heading b{font-size:17px}.src-heading span{font-size:12px;color:var(--soft)}.src-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 -5px}.src-chip{font:inherit;font-size:12px;color:var(--ink);background:#163a2e;border:1px solid #378c62;border-radius:22px;padding:8px 13px;cursor:pointer}.src-chip.active{outline:2px solid #7dbdff;outline-offset:2px;font-weight:700}.src-chip span{color:var(--soft);font-size:11px;margin-left:4px}.src-chip.active span{color:inherit}#extraLoadline input{font:inherit;font-size:12.5px;background:var(--panel);color:var(--ink);border:1px solid var(--rule);border-radius:6px;padding:6px 8px}#srcResults:empty{display:none}#srcResults:not(:empty){background:var(--panel);border:1px solid var(--rule);border-radius:9px;padding:9px;margin-top:6px}
+/* v0.7.0 green visual treatment; math, thresholds and data matching are untouched. */
+.stake-view{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--rule);border-radius:9px;padding:3px 5px;font-size:12px;color:var(--soft)}
+.stake-view-btn{font:inherit;border:none;background:transparent;color:var(--soft);padding:5px 9px;cursor:pointer;border-radius:7px}
+.stake-view-btn.on{background:var(--accent);color:var(--page);font-weight:750}
+
+:root{ --accent:#117b43; --accent-bg:#e8f7ee; --jetta:#117b43; --jetta-text:#117b43; --board-tint:#f1f8f4 }
+:root[data-theme="dark"]{ --accent:#39d88b; --accent-bg:#103023; --jetta:#29be76; --jetta-text:#66e9a5; --board-tint:#10271e }
+.handoff-info{background:var(--panel-2);border:1px solid var(--rule);padding:10px 14px;border-radius:9px;margin:12px 0 0;color:var(--soft);font-size:12px}
+#v-parlay-drafts>.panel{margin-top:20px}
+#v-parlay-drafts #parlayPanel{display:block;margin:18px 0;border-color:var(--accent)}
+#v-parlay-drafts #plSelectedLegs{min-height:34px}
+@media(max-width:690px){.tabs{gap:14px;flex-wrap:wrap}.tab{font-size:13px}#v-parlay-drafts .pl-form{flex-wrap:wrap}}
 </style>
 </head>
 <body>
@@ -718,8 +737,8 @@ button.log.sm.share-btn{background:transparent; color:var(--accent); border:1px 
 <div class="head">
   <div class="head-row">
     <div class="brandbox">
-      <h1>Prop Screener <span class="ver" id="verTag">v3.21</span><button type="button" class="sync-chip" id="syncChip" title="Your bets on every device (Settings)">☁ off</button></h1>
-      <div class="date">Board for <input type="date" id="slate"> <span class="built">· build 4 Nov 2026</span></div>
+      <h1>Augi Screener <span class="ver" id="verTag">v0.7.2</span><button type="button" class="sync-chip" id="syncChip" title="Your bets on every device (Settings)">☁ off</button></h1>
+      <div class="date">Board for <input type="date" id="slate"> <span class="built">· kit screening and stake calculation</span></div>
     </div>
     <div class="statbox">
       <div class="board-score"><span class="n" id="count">0</span><span class="of" id="countNote">nothing loaded yet</span></div>
@@ -793,8 +812,10 @@ button.log.sm.share-btn{background:transparent; color:var(--accent); border:1px 
   </div>
 </div>
 
+<div class="handoff-info">Original calculations and Settings are preserved. <strong>“I placed this · Log”</strong> records your confirmed wager; it does not submit one. Use <strong>Parlay</strong> to send a line to the dedicated slips tab.</div>
 <div class="tabs">
   <button class="tab on" data-view="v-board" data-src="api">Board</button>
+  <button class="tab" data-view="v-parlay-drafts" id="parlayTab">Parlay slips <span class="tab-n" id="plTabN">0</span></button>
   <button class="tab" data-view="v-board" data-src="paste">Pasted <span class="tab-n" id="pasteTabN"></span></button>
   <button class="tab" data-view="v-parole" title="Jail bets your own posted price would fix — Make orders on Novig">🔓 Parole <span class="tab-n" id="paroleTabN"></span></button>
   <button class="tab" data-view="v-add" title="Take a price or post your own — BET or SKIP and how much">+ Add a bet</button>
@@ -812,6 +833,16 @@ button.log.sm.share-btn{background:transparent; color:var(--accent); border:1px 
   <div class="ss-games" id="ssGames"><div class="ss-empty">Loading scores…</div></div>
 </div>
 
+<!-- ======================= PARLAY — original slip builder is moved here at startup ======================= -->
+<div class="view" id="v-parlay-drafts">
+  <div class="panel">
+    <h2>Parlay slips <span class="sub">drafts and placed-slip records</span></h2>
+    <p class="hint">Select <b>Parlay</b> on a qualifying Board line. That selection opens this tab and adds the leg to the original screener's slip builder. Nothing is submitted to a sportsbook; verify the exact lines and payout in the app before saving a placed slip.</p>
+    <p class="hint">Select two or more lines, review the combination, select the app and enter the actual payout. The <b>Log placed slip</b> button saves it to Bet log only after you place it yourself.</p>
+    <button type="button" class="ghost sm" id="plBackToBoard">← Add more legs from Board</button>
+  </div>
+  <div id="parlayTabHost"></div>
+</div>
 <!-- ======================= BOARD ======================= -->
 <div class="view on" id="v-board">
 
@@ -823,7 +854,7 @@ button.log.sm.share-btn{background:transparent; color:var(--accent); border:1px 
   <h2 id="boardTitle">The board</h2>
   <div class="psrc-note" id="pasteNote" style="display:none"></div>
   <div class="modes" id="modeBar" role="group" aria-label="Betting mode">
-    <button type="button" data-mode="safe">🛡️ Safe</button><button type="button" data-mode="lucky">🍀 Feeling Lucky</button><button type="button" data-mode="clair">🔮 Clairvoyant</button>
+    <span class="meta">Standard screening · edit thresholds and stake limits in Settings</span>
     <span class="contadora" id="contadora"></span>
   </div>
   <div class="today-line" id="todayLine"></div>
@@ -851,13 +882,38 @@ button.log.sm.share-btn{background:transparent; color:var(--accent); border:1px 
       </select></label>
     <input type="text" id="filterPlayer" class="bar-search" placeholder="Search player or team…" aria-label="Search player or team">
     <label class="bar-check"><input type="checkbox" id="swOnly"> Only sweet spot</label>
+    <div class="stake-view" aria-label="Stake display">
+      <span>Stake</span><button type="button" class="stake-view-btn" data-stake-mode="units">Units</button><button type="button" class="stake-view-btn" data-stake-mode="cash">Dollars</button>
+    </div>
     <label class="bar-check"><input type="checkbox" id="showRejects"> Show rejected</label>
-    <label class="bar-check" title="High-cover rows skipped only for a low single payout; full slip payout still needs review"><input type="checkbox" id="parlayOnly"> Parlay candidates</label>
+    <label class="bar-check" title="Open, positive-EV legs with 45%–80% projected cover; full slip payout still needs review"><input type="checkbox" id="parlayOnly"> Parlay candidates (45–80%)</label>
     <label class="bar-check"><input type="checkbox" id="onlyMyGames"> Only games I already bet</label>
     <button type="button" class="ghost sm" id="shopBtn" title="La Contadora re-checks every bet on this board — passing and skipped — at live Kalshi, Polymarket US and Novig prices (no BettingPros calls). Fair value stays from your last Pull.">🦑 Send the Sentinels</button><span class="meta" id="shopMsg"></span>
     <label class="bar-check"><input type="checkbox" id="notesAll"> Show all notes</label>
     <label class="bar-check" title="Bets to place show as cards above the table (uncheck for table rows)"><input type="checkbox" id="cardsOn" checked> Cards</label>
   </div>
+<details class="panel fold slip-builder" id="parlayPanel" style="display:none">
+  <summary><h2>Slip builder <span class="sub" id="plCount">0 legs</span></h2></summary>
+  <p class="hint">Choose each pick yourself with the Board’s <b>Parlay</b> button. This is a draft until you place it in an app and log the actual payout.</p>
+  <div id="plSelectedLegs" class="pl-selected" aria-live="polite"></div>
+  <div id="plDraft" class="hint" aria-live="polite"></div>
+  <button class="ghost" type="button" id="plBuild">Review selected legs</button>
+  <button class="ghost" type="button" id="plClear">Clear selection</button>
+  <div class="pl-form" id="plForm" style="display:none">
+    <div class="field"><label for="plBook">App for this slip</label><select id="plBook"><option>DraftKings Pick 6</option><option>PrizePicks</option><option>Underdog</option><option>Sleeper</option><option>DraftKings</option><option>DraftKings Predictions</option><option>FanDuel Predicts</option><option>Novig</option><option>Kalshi</option><option>Polymarket</option><option>Other</option></select></div>
+    <div class="field" style="max-width:90px"><label for="plPicks">Picks</label><input id="plPicks" type="number" min="2" max="12" value="2" readonly></div>
+    <div class="field" style="max-width:110px"><label for="plStake">Stake $</label><input id="plStake" type="number" step="0.01" min="0" placeholder="5.00"></div>
+    <div class="field" style="max-width:110px"><label for="plMult">App multiplier ×</label><input id="plMult" type="number" step="0.01" min="0" placeholder="optional"></div>
+    <div class="field"><label for="plAll">Pays if all hit $</label><input id="plAll" type="number" step="0.01" min="0" placeholder="from the app"></div>
+    <details class="pl-extra"><summary>Flex payout and game day (optional)</summary><div class="pl-form">
+      <div class="field"><label for="plM1">If 1 misses $</label><input id="plM1" type="number" step="0.01" min="0" placeholder="optional"></div>
+      <div class="field"><label for="plM2">If 2 miss $</label><input id="plM2" type="number" step="0.01" min="0" placeholder="optional"></div>
+      <div class="field" style="max-width:160px"><label for="plDay">Game day</label><input id="plDay" type="date"></div>
+    </div></details>
+    <div class="field wide"><label for="plLegs">Selected lines</label><input id="plLegs" readonly></div>
+    <button class="act" id="plAdd">Log placed slip</button> <span class="meta" id="plMsg"></span>
+  </div>
+</details>
   <div class="filter-chips" id="filterChips" style="display:none"></div>
   <div class="swipe-hint">Swipe sideways for stars, Bet Now and hit rate →</div>
   <div id="makesBar" class="makes-bar" style="display:none" title="Your Make orders still waiting for someone to take them — tap to see the first one"></div>
@@ -978,6 +1034,8 @@ button.log.sm.share-btn{background:transparent; color:var(--accent); border:1px 
 </div>
 
 <div class="view" id="v-settings">
+  <div class="panel"><h2>Stake display</h2><p class="hint">Switch between units and dollars for the Board's suggested stake. This changes only the display; the Kelly math and saved bet log remain in dollars.</p>
+  <div class="field"><label for="unitDollar">1 unit equals ($)</label><input id="unitDollar" type="number" min="0.01" step="0.25" value="2.50" style="max-width:120px"></div></div>
 
 <details class="panel fold" id="syncPanel" open>
   <summary><h2>☁ Your bets on every device <span class="sub">phone, other PCs — locked with your own sync password</span></h2></summary>
@@ -1033,6 +1091,8 @@ button.log.sm.share-btn{background:transparent; color:var(--accent); border:1px 
   <div class="grid">
     <div class="field"><label for="oMin">Odds floor</label><input id="oMin" type="number" value="-300" step="5"></div>
     <div class="field"><label for="oMax">Odds ceiling</label><input id="oMax" type="number" value="500" step="5"></div>
+    <div class="field"><label for="singleCoverMin">Single cover min %</label><input id="singleCoverMin" type="number" value="55" min="0" max="100" step="1"></div>
+    <div class="field"><label for="singleCoverMax">Single cover max %</label><input id="singleCoverMax" type="number" value="70" min="0" max="100" step="1"></div>
     <div class="field"><label for="eMin">Net EV floor %</label><input id="eMin" type="number" value="1.5" step="0.5"></div>
     <div class="field"><label for="eMax">Gross EV ceiling %</label><input id="eMax" type="number" value="40" step="0.5"></div>
     <div class="field"><label for="devig">Devig tolerance %</label><input id="devig" type="number" value="2" step="0.5"></div>
@@ -1243,25 +1303,7 @@ button.log.sm.share-btn{background:transparent; color:var(--accent); border:1px 
   <textarea id="csvOut" style="display:none; margin-top:12px; min-height:120px" spellcheck="false" readonly></textarea>
 </div>
 
-<details class="panel fold" id="parlayPanel">
-  <summary><h2>Add a parlay / Pick 6 <span class="sub">logged and tallied; graded by hand ("how many hit")</span></h2></summary>
-  <p class="hint">The screener only prices single bets, so a parlay gets no value check. It counts in that book's slot in the Today ribbon, but not against the screener's daily max.</p>
-  <p class="hint">Mark two or more picks on the Board with <b>Parlay</b>, then build a draft here. The marked picks may come from different books. Choose the app where you will enter the slip, and check each exact line and payout there before logging it.</p>
-  <button class="ghost" type="button" id="plBuild">Build from marked picks</button>
-  <div id="plDraft" class="hint" aria-live="polite"></div>
-  <div class="pl-form">
-    <div class="field"><label for="plBook">App for this slip</label><select id="plBook"><option>DraftKings Pick 6</option><option>PrizePicks</option><option>Underdog</option><option>Sleeper</option><option>DraftKings</option><option>DraftKings Predictions</option><option>FanDuel Predicts</option><option>Novig</option><option>Kalshi</option><option>Polymarket</option><option>Other</option></select></div>
-    <div class="field" style="max-width:90px"><label for="plPicks">Picks</label><input id="plPicks" type="number" min="2" max="12" value="4"></div>
-    <div class="field" style="max-width:110px"><label for="plStake">Stake $</label><input id="plStake" type="number" step="0.01" min="0" placeholder="5.00"></div>
-    <div class="field" style="max-width:110px"><label for="plMult">Shown multiplier ×</label><input id="plMult" type="number" step="0.01" min="0" placeholder="optional"></div>
-    <div class="field"><label for="plAll">Pays if all hit $</label><input id="plAll" type="number" step="0.01" min="0" placeholder="50.00"></div>
-    <div class="field"><label for="plM1">…if 1 misses $</label><input id="plM1" type="number" step="0.01" min="0" placeholder="optional"></div>
-    <div class="field"><label for="plM2">…if 2 miss $</label><input id="plM2" type="number" step="0.01" min="0" placeholder="optional"></div>
-    <div class="field" style="max-width:160px"><label for="plDay">Game day</label><input id="plDay" type="date"></div>
-    <div class="field wide"><label for="plLegs">Legs (optional note)</label><input id="plLegs" placeholder="Mahomes O 1.5 TD, Bijan O 70.5 rush…"></div>
-    <button class="act" id="plAdd">Add parlay</button> <span class="meta" id="plMsg"></span>
-  </div>
-</details>
+
 
 <div class="panel">
   <h2>Log</h2>
@@ -1337,7 +1379,47 @@ button.log.sm.share-btn{background:transparent; color:var(--accent); border:1px 
 
 </div>
 <script>
-const SCREENER_VERSION='v3.21';
+const SCREENER_VERSION='v0.7.2';
+// Stake presentation retained from Augi Odds Board. This NEVER changes internal dollars or EV.
+let augiStakeMode='units', augiUnitDollar=2.5;
+try{
+  const mode=localStorage.getItem('augi.stakeMode');if(['cash','units'].includes(mode))augiStakeMode=mode;
+  const amount=Number(localStorage.getItem('augi.unitDollar'));if(Number.isFinite(amount)&&amount>0)augiUnitDollar=amount;
+}catch(e){}
+function stakeFormat(n){
+  if(!Number.isFinite(n))return '—';
+  return augiStakeMode==='units'?(n/augiUnitDollar).toFixed(2)+'u':'$'+n.toFixed(2);
+}
+function updateStakeControls(){
+  document.querySelectorAll('[data-stake-mode]').forEach(btn=>{
+    const isOn=btn.dataset.stakeMode===augiStakeMode;
+    btn.classList.toggle('on',isOn);btn.setAttribute('aria-pressed',String(isOn));
+  });
+  const input=document.getElementById('unitDollar');if(input&&document.activeElement!==input)input.value=augiUnitDollar.toFixed(2);
+}
+document.querySelectorAll('[data-stake-mode]').forEach(btn=>btn.addEventListener('click',()=>{
+  augiStakeMode=btn.dataset.stakeMode;
+  try{localStorage.setItem('augi.stakeMode',augiStakeMode)}catch(e){}
+  updateStakeControls(); if(typeof refresh==='function')refresh();
+}));
+document.getElementById('unitDollar')?.addEventListener('change',e=>{
+  const amount=Number(e.target.value);
+  if(!Number.isFinite(amount)||amount<=0){e.target.value=augiUnitDollar.toFixed(2);return;}
+  augiUnitDollar=amount;
+  try{localStorage.setItem('augi.unitDollar',String(amount))}catch(e){}
+  updateStakeControls();if(typeof refresh==='function')refresh();
+});
+updateStakeControls();
+// v0.7.0: the original Board, fee, Kelly, schedule and photo engine is retained.
+// Relocate its existing slip panel, without reimplementing its parsing or calculations.
+{
+  const host=document.getElementById('parlayTabHost');
+  const originalPanel=document.getElementById('parlayPanel');
+  if(host && originalPanel){host.appendChild(originalPanel);originalPanel.open=true;}
+  document.getElementById('plBackToBoard')?.addEventListener('click',()=>{
+    document.querySelector('.tab[data-view="v-board"][data-src="api"]')?.click();
+  });
+}
 // the header and tab title always show this one number
 document.title='Prop Screener '+SCREENER_VERSION;
 { const t=document.getElementById('verTag'); if(t) t.textContent=SCREENER_VERSION; }
@@ -1612,8 +1694,8 @@ function pairUp(rows){
 }
 
 /* ============ config ============ */
-/* v2.65: betting modes. Safe = your Settings. Feeling Lucky = a bit looser (bounded). Clairvoyant = Lucky +
-   long shots (anytime TD / home run / goal scorer at +200 or longer) with tiny limits; it resets to Safe at midnight. */
+/* Keep the kit's standard calculation and user-adjustable Settings as the single screening mode.
+   Older mode records in localStorage cannot silently raise the Kelly or daily limits. */
 const MODES={
   safe:  {label:'🛡️ Safe'},
   lucky: {label:'🍀 Feeling Lucky', kelly:0.33, gameCapPct:2.5, dayMaxPct:15, mevOutlier:0.20, mevGap:0.10, mevOddsMax:700},
@@ -1621,9 +1703,6 @@ const MODES={
 };
 const LONGSHOT={each:2, perGame:5, perDay:15, minNet:0.08, review:0.15};
 let betMode='safe';
-(function(){ try{ const m=JSON.parse(localStorage.getItem('mbev.mode')||'null');
-  if(m && MODES[m.mode]){ const today=new Date().toLocaleDateString('en-CA',{timeZone:'America/Chicago'});
-    betMode = (m.mode==='clair' && m.day!==today) ? 'safe' : m.mode; } }catch(e){} })();
 const CONTADORA={safe:'',
   lucky:'<b>La Contadora:</b> "A little more is fine. 15% a day is the ceiling, not the goal."',
   clair:'<b>La Contadora:</b> "Two of these, maybe three. Not thirty-six." · back to Safe at midnight'};
@@ -1648,6 +1727,8 @@ function cfgReadBase(){
   const v=id=>parseFloat(document.getElementById(id).value)||0;
   return {
     oMin:v('oMin'), oMax:v('oMax'), eMin:v('eMin')/100, eMax:v('eMax')/100,
+    singleCoverMin:Math.max(0,Math.min(100,v('singleCoverMin')))/100,
+    singleCoverMax:Math.max(0,Math.min(100,v('singleCoverMax')))/100,
     devig:v('devig')/100,
     books:document.getElementById('books').value.split(',').map(s=>s.trim().toLowerCase()).filter(Boolean),
     bank:v('bank'), kelly:v('kelly'), shrink:v('shrink'), sMin:v('sMin'), sMax:v('sMax'),
@@ -1721,6 +1802,8 @@ function audit(rows,cfg){
     // v2.65: Feeling Lucky / Clairvoyant allow longer odds on Market EV (sharp) rows only
     const oMaxRow = (cfg.mevOddsMax && r.src==='paste:mev') ? Math.max(cfg.oMax, cfg.mevOddsMax) : cfg.oMax;
     if(r.amer<cfg.oMin||r.amer>oMaxRow) r.flags.push(['out','odds outside '+cfg.oMin+' to '+fmtOdds(oMaxRow)]);
+    if(r.fairProb<cfg.singleCoverMin || r.fairProb>cfg.singleCoverMax)
+      r.flags.push(['out','single cover outside '+pct(cfg.singleCoverMin)+' to '+pct(cfg.singleCoverMax)]);
     if(r.gross>cfg.eMax) r.flags.push(['out','gross EV over the ceiling']);
     if(r.net<cfg.eMin) r.flags.push(['out','net EV under the floor']);
     if(cfg.deriv&&r.kind==='derivative') r.flags.push(['out','quarter or half market']);
@@ -2035,7 +2118,7 @@ function render(rows,cfg){
   if(!pv && swc.only) shown=shown.filter(r=>isSweet(r,swc));
   // v2.62: three groups — bets to place, bets you already have, then everything to skip.
   // Your sort (or a column-header click) applies inside each group.
-  const grpOf=x=> x.prior ? 1 : isStarted(x) ? 3 : liveState(x)==='unconfirmed' ? 4 : (x.pass && x.stake>0 && !x.removed) ? 0 : 2;
+  const grpOf=x=> x.prior ? 1 : isStarted(x) ? 3 : liveState(x)==='unconfirmed' ? 4 : (parlayOnly && parlayCandidate(x,cfg)) || (x.pass && x.stake>0 && !x.removed) ? 0 : 2;
   shown.sort((a,b)=>{
     const ga=grpOf(a), gb=grpOf(b);
     if(ga!==gb) return ga-gb;
@@ -2116,8 +2199,9 @@ function render(rows,cfg){
     const tr=document.createElement('tr');
     const started = r.gameInfo && (r.gameInfo.state==='in'||r.gameInfo.state==='post');
     // v2.61: anything you shouldn't place is greyed out (still readable on hover / with notes open)
-    const isSkip = !r.prior && (!(r.stake>0) || r.removed || started || liveState(r)!=='open');   // v2.62: a game that already started can't be placed
-    tr.className = (r.pass?'':'out ') + (r.prior?'dupe':(r.corr?'corr':'')) + (started?' gameover':'') + (isSkip?' skiprow':'');
+    const parlayLeg=parlayOnly && parlayCandidate(r,cfg);
+    const isSkip = !r.prior && !parlayLeg && (!(r.stake>0) || r.removed || started || liveState(r)!=='open');
+    tr.className = (r.pass||parlayLeg?'':'out ') + (r.prior?'dupe':(r.corr?'corr':'')) + (started?' gameover':'') + (isSkip?' skiprow':'');
     const gTag = !r.gameInfo ? '<span class="tag t-warn" title="ESPN didn\'t list this game in the next 4 days">game time not found</span>'
       : r.gameInfo.state==='post' ? '<span class="tag t-out">Final — '+esc(r.gameInfo.detail||'game over')+'</span>'
       : r.gameInfo.state==='in'   ? '<span class="tag t-warn">Live — started '+esc(giWhen(r.gameInfo))+'</span>'
@@ -2176,11 +2260,11 @@ function render(rows,cfg){
         (bookLogo(r.book)?'':'<div class="meta book">'+esc(bookLabel(r.book)||'book?')+'</div>')+
         '<div class="btnrow">'+(r.prior
           ? '<button class="log sm undo bet-undo" data-idx="'+r.idx+'">Undo bet</button><button class="log sm bet-edit" data-idx="'+r.idx+'">Edit</button>'
-          : '<button class="log sm bet-btn" data-idx="'+r.idx+'">'+(r.moved?'Add this line too':'I bet this')+'</button>')+
-          '<button class="log sm parlay'+(inParlay(r)?' on':'')+' parlay-btn" data-idx="'+r.idx+'" title="Mark as used in a parlay">'+
-          (inParlay(r)?'In parlay ✓':'Parlay')+'</button></div></td>';
+          : (isPlace(r) && liveState(r)==='open' ? '<button class="log sm bet-btn" data-idx="'+r.idx+'" title="Record this bet after placing it in your app">I placed this · Log</button>' : '<span class="meta">Not a passing single</span>'))+
+          (inParlay(r)||parlayCandidate(r,cfg)?'<button class="log sm parlay'+(inParlay(r)?' on':'')+' parlay-btn" data-idx="'+r.idx+'" title="Add or remove this 45%–80% cover leg from your draft slip">'+
+          (inParlay(r)?'Remove from slip ✓':'Parlay')+'</button>':'')+'</div></td>';
     cells.fee='<td class="num">'+(r.fee===undefined?'—':(r.fee?'−'+pct(r.fee):'—'))+'</td>';
-    cells.stake='<td class="num">'+decisionHtml(r,cfg)+
+    cells.stake='<td class="num">'+(parlayLeg?'<span class="tag t-live">PARLAY LEG</span><div class="meta">Single: '+(isPlace(r)?'eligible':'skip')+'</div>':decisionHtml(r,cfg))+
         (r.stake&&r.mktProb!=null&&r.blendProb!=null?'<div class="meta" title="Probability used for sizing: market blended with the model">sized at '+pct(r.blendProb)+'</div>':'')+
         (r.stake&&r.contracts?'<div class="meta">'+r.contracts+'xC</div>':'')+'</td>';
     tr.innerHTML=BOARD_COLS.map(c=>cells[c]).join('');
@@ -2195,7 +2279,7 @@ function render(rows,cfg){
 
   const pcBox=document.getElementById('placeCards');
   if(pcBox){
-    if(cardsOn && cardsHtml.length){ pcBox.innerHTML='<div class="pc-head"><b>Place these</b> · '+cardsHtml.length+'</div>'+cardsHtml.join(''); pcBox.style.display='block'; }
+    if(cardsOn && cardsHtml.length){ pcBox.innerHTML='<div class="pc-head"><b>'+(parlayOnly?'Parlay legs':'Place these')+'</b> · '+cardsHtml.length+'</div>'+cardsHtml.join(''); pcBox.style.display='block'; }
     else { pcBox.innerHTML=''; pcBox.style.display='none'; }
   }
   const bothQ=sel=>[...tb.querySelectorAll(sel)].concat(pcBox?[...pcBox.querySelectorAll(sel)]:[]);
@@ -2245,7 +2329,10 @@ function render(rows,cfg){
     document.getElementById('cuts').innerHTML = nSkip>0 ? '<details class="cut-sum"><summary class="cut"><b>'+nSkip+'</b> skipped ▸</summary><div class="cut-list">'+list.map(([k,v])=>'<div><b>'+v+'</b> '+esc(k)+'</div>').join('')+'</div></details>' : ''; }
 
   empty.style.display = shown.length?'none':'block';
-  if(rows.length&&!shown.length) empty.textContent='Every bet failed a screen. Switch on the rejects to see why each one died.';
+  if(rows.length&&!shown.length) empty.textContent=parlayOnly
+    ? 'No parlay candidates visible in this loaded board. This switch looks for open legs with 45%–80% projected cover and positive EV. Turn it off and turn on Show rejected to see why other rows were skipped; also check sport and search filters.'
+    : 'Every bet failed a screen. Switch on Show rejected to see why each one was skipped.';
+  renderParlayTray(rows);
 }
 
 /* ============ v2.69: bet cards for "Place these" ============
@@ -2289,8 +2376,8 @@ function placeCardHtml(r,cfg,o){
       pcCell('Projection','<div class="pc-big">'+(r.projValue!=null?(Math.round(r.projValue*10)/10):'—')+'</div><span class="pc-s">'+esc(mname)+'</span>')+
       pcCell('EV after fees','<div class="pc-big '+(r.net>0?'up':'down')+'">'+ev+'</div><span class="pc-s">'+(r.fairProb!=null?pct(r.fairProb)+' cover':'')+(bp?' · '+bp:'')+'</span>')+
       pcCell('Rating','<div class="pc-stars">'+(nS==null?'—':'★'.repeat(nS)+'<span>'+'★'.repeat(5-nS)+'</span>')+'</div><span class="pc-s">'+(nS==null?'no rating':nS+'-star')+'</span>')+
-      pcCell('Screener', decisionHtml(r,cfg)+'<div class="pc-btns"><button class="log sm bet-btn" data-idx="'+r.idx+'">'+(r.moved?'Add this line too':'I bet this')+'</button>'+
-        '<button class="log sm parlay'+(inParlay(r)?' on':'')+' parlay-btn" data-idx="'+r.idx+'" title="Mark as used in a parlay">'+(inParlay(r)?'In parlay ✓':'Parlay')+'</button>'+
+      pcCell('Screener', (parlayOnly&&parlayCandidate(r,cfg)?'<span class="tag t-live">PARLAY LEG</span><div class="meta">Single: '+(isPlace(r)?'eligible':'skip')+'</div>':decisionHtml(r,cfg))+'<div class="pc-btns">'+(isPlace(r) && liveState(r)==='open' ? '<button class="log sm bet-btn" data-idx="'+r.idx+'" title="Record this bet after placing it in your app">I placed this · Log</button>' : '<span class="meta">Not a passing single</span>')+
+        (inParlay(r)||parlayCandidate(r,cfg)?'<button class="log sm parlay'+(inParlay(r)?' on':'')+' parlay-btn" data-idx="'+r.idx+'" title="Add or remove this 45%–80% cover leg from your draft slip">'+(inParlay(r)?'Remove from slip ✓':'Parlay')+'</button>':'')+
         '<button class="log sm share-btn" data-idx="'+r.idx+'" title="Send this bet to someone — with the same link the logo opens: the slip with the side, line and the screener stake filled in (they can change it). Your bankroll, EV and log do not go with it.">📤 Share</button></div>')+
     '</div>'+
     (o.nTags?'<div class="pc-foot"><button class="ntog" data-nkey="'+esc(o.nKey)+'" aria-expanded="'+o.nOpen+'" title="Show or hide the notes for this bet"><span class="dot '+o.worst+'"></span>'+(o.nOpen?'▾ ':'▸ ')+o.nTags+' note'+(o.nTags===1?'':'s')+'</button>'+(o.nOpen?'<div class="tags">'+o.tags+'</div>':'')+'</div>':'')+
@@ -2398,7 +2485,7 @@ function openBetEditor(tr, r, opt){
       '<label title="Type exactly what the slip says (what you get back if it wins: cost + profit; a number below the cost is read as profit). What you type stays — Cost + To win is the real deal, the @ % stays as the listed price.">To win $ <input class="eb-win" type="number" step="0.01" placeholder="3.93"></label>'+
       '<span class="pm-calc eb-calc"></span></span>'+
     '<span class="eb-check"></span><span class="meta eb-rec"></span>'+
-    '<button class="log sm eb-save">'+(opt.edit?'Save changes':'Save bet')+'</button> <button class="log sm undo eb-cancel">Cancel</button>'+
+    '<button class="log sm eb-save">'+(opt.edit?'Save changes':'Save placed bet')+'</button> <button class="log sm undo eb-cancel">Cancel</button>'+
     '<span class="meta eb-msg"></span></div>'+(isCard?'':'</td>');
   if(isCard) tr.appendChild(ed); else tr.after(ed);
   // v2.71: % mode starts filled in — Cost = the screener's stake (or what you saved), @ % = the price
@@ -2650,37 +2737,56 @@ function parlayKeyOf(r){
   return Object.keys(parlays).find(k=>k.endsWith(tail) && Date.now()-(parlays[k].at||0)<36*3600e3) || null;
 }
 function inParlay(r){ return !!parlayKeyOf(r); }
-function toggleParlay(r){
-  const k=parlayKeyOf(r);
-  if(k) delete parlays[k]; else parlays[matchKey(r)]={name:r.name, market:r.market, at:Date.now()};
-  saveParlays(); refresh();
+function renderParlayTray(rows){
+  const panel=document.getElementById('parlayPanel'), box=document.getElementById('plSelectedLegs');
+  if(!panel || !box) return;
+  const picks=(rows||[]).filter(inParlay);
+  panel.style.display='block';
+  const tabCounter=document.getElementById('plTabN');
+  if(tabCounter) tabCounter.textContent=String(picks.length);
+  document.getElementById('plCount').textContent=picks.length+' leg'+(picks.length===1?'':'s');
+  box.innerHTML=picks.map(r=>'<div class="pl-leg"><span><b>'+esc(r.name)+'</b> · '+esc(r.side||'')+' '+esc(r.market)+' · '+esc(r.sport||'')+' · '+esc(bookLabel(r.book)||r.book||'')+'</span><button type="button" class="ghost sm" data-idx="'+r.idx+'">Remove</button></div>').join('');
+  box.querySelectorAll('button').forEach(btn=>btn.addEventListener('click',()=>{
+    const r=(lastRows||[]).find(x=>x.idx===+btn.dataset.idx);
+    if(r) startParlayDraft(r);
+  }));
+  if(picks.length<2) document.getElementById('plForm').style.display='none';
 }
 function startParlayDraft(seed){
-  if(liveState(seed)!=='open') return;
-  if(!inParlay(seed)) parlays[matchKey(seed)]={name:seed.name, market:seed.market, at:Date.now()};
-  const marked=(lastRows||[]).filter(r=>inParlay(r) && liveState(r)==='open');
-  if(marked.length<2){
-    const companion=(lastRows||[]).filter(r=>r!==seed && !inParlay(r) && r.sport===seed.sport && r.game!==seed.game &&
-      liveState(r)==='open' && (r.pass || parlayCandidate(r,cfgRead())) && r.fairProb!=null)
-      .sort((a,b)=>(b.fairProb||0)-(a.fairProb||0))[0];
-    if(companion) parlays[matchKey(companion)]={name:companion.name, market:companion.market, at:Date.now()};
+  const panel=document.getElementById('parlayPanel'), draft=document.getElementById('plDraft');
+  document.getElementById('parlayTab')?.click();
+  const key=parlayKeyOf(seed);
+  if(key) delete parlays[key];
+  else if(parlayCandidate(seed,cfgRead()))
+    parlays[matchKey(seed)]={name:seed.name, market:seed.market, at:Date.now()};
+  else {
+    panel.style.display='block'; panel.open=true;
+    draft.textContent='This row is not an open, eligible 45%–80% cover parlay leg. Check its Notes before adding it.';
+    panel.scrollIntoView({behavior:'smooth',block:'nearest'});
+    return;
   }
-  saveParlays();refresh();
-  const tab=document.querySelector('.tab[data-view="v-log"]');if(tab) tab.click();
-  const panel=document.getElementById('parlayPanel');if(panel){panel.open=true;panel.scrollIntoView({behavior:'smooth',block:'start'});}
-  document.getElementById('plBuild').click();
-  if((lastRows||[]).filter(r=>inParlay(r)).length<2) document.getElementById('plDraft').textContent='This pick is marked. Choose one more open Board pick to complete the draft.';
+  builtParlayLegs=[];
+  document.getElementById('plForm').style.display='none';
+  saveParlays(); refresh();
+  const count=(lastRows||[]).filter(inParlay).length;
+  if(count){ panel.open=true; draft.textContent=count<2?'Choose one more Board pick. Nothing else will be added automatically.':'Your selected legs are below. Review the slip before placing it.'; panel.scrollIntoView({behavior:'smooth',block:'nearest'}); }
+  if(count>=2) document.getElementById('plBuild').click();
 }
 
 let builtParlayLegs=[];
+document.getElementById('plClear').addEventListener('click',()=>{
+  parlays={}; builtParlayLegs=[]; saveParlays();
+  document.getElementById('plForm').style.display='none'; refresh();
+});
 document.getElementById('plBuild').addEventListener('click',()=>{
   const draft=document.getElementById('plDraft');
   const picks=(lastRows||[]).filter(r=>inParlay(r));
   builtParlayLegs=[];
-  if(picks.length<2){ draft.textContent='Mark at least two Board picks with Parlay first.'; return; }
+  document.getElementById('plForm').style.display='none';
+  if(picks.length<2){ draft.textContent='Choose at least two Board picks first.'; return; }
   const books=[...new Set(picks.map(r=>r.book))];
-  if(picks.some(r=>r.gameInfo?.state==='in' || r.gameInfo?.state==='post' || liveState(r)!=='open')){
-    draft.textContent='At least one marked game has started or closed. Remove it from the draft before continuing.';
+  if(picks.some(r=>!parlayCandidate(r,cfgRead()))){
+    draft.textContent='A selected leg is no longer open or eligible. Remove it and choose a current line.';
     return;
   }
   const book=books.length===1?books[0]:null;
@@ -2693,7 +2799,8 @@ document.getElementById('plBuild').addEventListener('click',()=>{
   document.getElementById('plMult').value='';
   document.getElementById('plM1').value='';
   document.getElementById('plM2').value='';
-  draft.textContent=picks.length+' legs from '+books.map(bookLabel).join(', ')+' added below. Choose one app and confirm that every exact leg is offered there. Enter its real payout before logging a placed slip.';
+  document.getElementById('plForm').style.display='flex';
+  draft.textContent='Draft only. Choose one app, confirm every line there, then enter its actual multiplier or payout. Log it after you place the slip.';
 });
 
 function undoBet(r, tr){
@@ -2711,7 +2818,7 @@ try{ notesAll=localStorage.getItem('mbev.notesAll')==='1'; }catch(e){}
 function saveNotesAll(){ try{ localStorage.setItem('mbev.notesAll', notesAll?'1':'0'); }catch(e){} }
 /* v2.51: one plain decision per row; the tags in Notes are the detail */
 function decisionHtml(r,cfg){
-  const $=x=>'$'+x.toFixed(2);
+  const $=x=>stakeFormat(x);
   const d=(cls,txt,sub)=>'<div class="dec '+cls+'">'+txt+'</div>'+(sub?'<div class="meta">'+sub+'</div>':'');
   // v2.58: several short lines under the decision
   const dl=(cls,txt,lines)=>'<div class="dec '+cls+'">'+txt+'</div><div class="meta dec-lines">'+lines.join('<br>')+'</div>';
@@ -4768,12 +4875,13 @@ let showRejects = false;
 let parlayOnly = false;
 function parlayCandidate(r,cfg){
   if(!r || r.prior || r.hiddenDup || r.removed || r.moved || r.samePlayer || r.glConflict || r.stale) return false;
-  if(liveState(r)!=='open' || r.fairProb==null || r.fairProb<0.55 || !(r.net>0)) return false;
+  if(liveState(r)!=='open' || r.fairProb==null || r.fairProb<0.45 || r.fairProb>0.80 || !(r.net>0)) return false;
   const flags=r.flags||[];
-  const lowPayout=(Number.isFinite(r.amer) && r.amer<cfg.oMin) || flags.some(f=>/stake under .* minimum|whole contracts come to .* under .* minimum/i.test(f[1]||''));
-  const otherBlock=flags.some(f=>f[0]==='out' && !(Number.isFinite(r.amer) && r.amer<cfg.oMin && /odds outside/i.test(f[1]||'')));
+  // Single-only cover, EV floor and payout cutoffs do not decide whether a leg enters a draft slip.
+  const otherBlock=flags.some(f=>f[0]==='out' && !/single cover outside|net EV under the floor/i.test(f[1]||'') &&
+    !(Number.isFinite(r.amer) && r.amer<cfg.oMin && /odds outside/i.test(f[1]||'')));
   const riskBlock=flags.some(f=>/game cap|daily max|one per player|outlier|risk-bet limit|same game|no edge/i.test(f[1]||''));
-  return lowPayout && !otherBlock && !riskBlock;
+  return !otherBlock && !riskBlock;
 }
 
 // Comprehensive filter state
@@ -4826,7 +4934,11 @@ function passesSettingsFilters(r){
     
     const odds = parseFloat(r.offeredRaw);
     if (!isNaN(odds)) {
-      if (odds < filterOddsMin || odds > filterOddsMax) return false;
+      // The default advanced odds floor must not hide the low-payout legs
+      // that the Parlay candidates switch was specifically built to show.
+      const defaultFloorForParlay = parlayOnly && filterOddsMin===-300 &&
+        Number.isFinite(r.amer) && r.amer<cfgRead().oMin;
+      if ((odds < filterOddsMin && !defaultFloorForParlay) || odds > filterOddsMax) return false;
     }
     
     const netEV = (r.net || 0) * 100;
@@ -4883,8 +4995,16 @@ document.querySelectorAll('#boardHead th.sortable').forEach(th=>th.addEventListe
   paintSortArrows(); rerenderWithFilters();
 }));
 document.getElementById('filterSport').addEventListener('change', (e)=>{ filterSport=e.target.value; rerenderWithFilters(); });
-document.getElementById('showRejects').addEventListener('change', (e)=>{ showRejects=e.target.checked; rerenderWithFilters(); });
-document.getElementById('parlayOnly').addEventListener('change', e=>{ parlayOnly=e.target.checked; rerenderWithFilters(); });
+document.getElementById('showRejects').addEventListener('change', (e)=>{
+  showRejects=e.target.checked;
+  if(showRejects){ parlayOnly=false; document.getElementById('parlayOnly').checked=false; }
+  rerenderWithFilters();
+});
+document.getElementById('parlayOnly').addEventListener('change', e=>{
+  parlayOnly=e.target.checked;
+  if(parlayOnly){ showRejects=false; document.getElementById('showRejects').checked=false; }
+  rerenderWithFilters();
+});
 document.getElementById('onlyMyGames').addEventListener('change', e=>{ filterCorrOnly=e.target.checked; refresh(); });
 
 // Event listeners for advanced filters
@@ -5547,7 +5667,7 @@ document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
   if(t.dataset.src && t.dataset.src!==boardSrc){ boardSrc=t.dataset.src; refresh(); }   // v2.86: Board (API) vs Pasted
 }));
 function showBoardSrc(src){ const t=document.querySelector('.tab[data-src="'+src+'"]'); if(t) t.click(); }
-const NUMS=['oMin','oMax','eMin','eMax','devig','bank','kelly','shrink','sMin','sMax','mWeight','gameCapPct','dayGoal','dayMaxPct','dayMaxMevPct',
+const NUMS=['oMin','oMax','singleCoverMin','singleCoverMax','eMin','eMax','devig','bank','kelly','shrink','sMin','sMax','mWeight','gameCapPct','dayGoal','dayMaxPct','dayMaxMevPct',
             'fKalshi','fProphet','fPoly','fNovig','fFliff','fBook','fFdp'];
 NUMS.forEach(id=>document.getElementById(id).addEventListener('input',()=>{ refresh(); manual(); save(); renderDays(); }));
 ['fKalshi','fProphet','fPoly','fNovig','fFliff','fBook'].forEach(id=>document.getElementById(id).addEventListener('input',renderMoneylines));
@@ -5857,8 +5977,8 @@ function loadCfg(){
 /* theme — explicit choice, remembered per browser */
 (function theme(){
   const btn=document.getElementById('themer');
-  let cur='light';
-  try{ cur=localStorage.getItem('mbev.theme')||'light'; }catch(e){}
+  let cur='dark';
+  try{ cur=localStorage.getItem('mbev.theme')||'dark'; }catch(e){}
   const apply=t=>{
     document.documentElement.setAttribute('data-theme',t);
     btn.textContent = t==='dark' ? '☀' : '☾'; btn.title = t==='dark' ? 'Light mode' : 'Dark mode';
@@ -5907,6 +6027,11 @@ document.getElementById('todayBar').addEventListener('click',e=>{ const eb=e.tar
 document.getElementById('plAdd').addEventListener('click',()=>{
   const v=id=>parseFloat(document.getElementById(id).value), msg=document.getElementById('plMsg');
   const book=document.getElementById('plBook').value, picks=Math.round(v('plPicks')), stake=v('plStake'), mult=v('plMult'), all=v('plAll')>0?v('plAll'):(stake>0 && mult>1?stake*mult:NaN);
+  const marked=(lastRows||[]).filter(inParlay);
+  if(marked.length!==picks || builtParlayLegs.length!==picks || marked.some(r=>!parlayCandidate(r,cfgRead()))){
+    msg.textContent='The selected legs changed or a game started. Review the slip again with current lines.';
+    document.getElementById('plForm').style.display='none'; return;
+  }
   if(!(picks>=2)){ msg.textContent='Picks: 2 or more.'; return; }
   if(!(stake>0) || !(all>stake)){ msg.textContent='Enter the stake and what it pays if all hit (more than the stake).'; return; }
   const day=document.getElementById('plDay').value||ctDay(Date.now()), legs=document.getElementById('plLegs').value.trim();
@@ -5916,9 +6041,11 @@ document.getElementById('plAdd').addEventListener('click',()=>{
     book, odds:fmtOdds(Math.round(americanOf(stake/all))), fair:'', stake:+stake.toFixed(2), result:'pending', closing:'',
     parlay:{picks, legs, legsData:builtParlayLegs.length===picks?builtParlayLegs.map(x=>({...x})):[], pays:{all:+all.toFixed(2), m1:m1>0?+m1.toFixed(2):0, m2:m2>0?+m2.toFixed(2):0}, hits:null, payout:null},
     snap:{at:new Date().toISOString(), screener:SCREENER_VERSION, said:{decision:'PARLAY', onList:false}} });
-  builtParlayLegs=[];saveLog(); renderLog(); renderPerf();
+  builtParlayLegs=[]; parlays={}; saveParlays(); saveLog(); renderLog(); renderPerf(); refresh();
   ['plStake','plMult','plAll','plM1','plM2','plLegs'].forEach(id=>document.getElementById(id).value='');
-  msg.textContent='Added — grade it in the log with "how many hit".';
+  document.getElementById('plForm').style.display='none';
+  msg.textContent='Placed slip logged. See Bet log for its result.';
+  const log=document.querySelector('.tab[data-view="v-log"]'); if(log) log.click();
 });
 (function(){ const cb=document.getElementById('dkGroup'); if(!cb) return; cb.checked=dkGrouped();
   cb.addEventListener('change',()=>{ try{ localStorage.setItem('mbev.dkGroup',cb.checked?'1':'0'); }catch(e){} renderTodayBar(); }); })();
@@ -6376,7 +6503,7 @@ async function shopExchanges(){
   const btn=document.getElementById('shopBtn'), msg=document.getElementById('shopMsg'); if(!btn) return;
   cleanParlayMarks();
   const cfg=cfgRead(), have=cfg.books&&cfg.books.length?cfg.books:null;
-  const exch=['Kalshi','Polymarket US','Novig'].filter(n=>!have || have.some(b=>n.toLowerCase().includes(b)||b.includes(n.split(' ')[0].toLowerCase())));
+  const exch=['Kalshi','Polymarket US'].filter(n=>!have || have.some(b=>n.toLowerCase().includes(b)||b.includes(n.split(' ')[0].toLowerCase())));
   const started=r=>r.gameInfo&&(r.gameInfo.state==='in'||r.gameInfo.state==='post');
   const rows=lastRows.filter(r=>r.fairProb!=null && !r.prior && !started(r) && !r.hiddenDup && (boardSrc==='paste'?isPasteRow(r):!isPasteRow(r)));
   const jobs=[]; rows.forEach(r=>{ exch.forEach(n=>{ const d=liveDesc(Object.assign(rowAsBet(r),{book:n, id:'shop:'+r.idx+':'+LIVE_BOOK(n)})); if(d) jobs.push([r,n,d]); }); });
@@ -6860,7 +6987,7 @@ async function abAsk(manual){
   if(f.kind==='prop'||f.kind==='total') opp=Object.assign({},base,{side:f.side==='O'?'U':'O'});
   else if(f.kind==='moneyline'){ const t=teamsOf(f.game); if(t&&f.team){ const o=normAbbr(f.team)===t[0]?t[1]:t[0]; opp=Object.assign({},base,{team:o,name:o}); } }
   const descs=[];
-  ['Kalshi','Polymarket US','Novig'].forEach(n=>{ const sr=LIVE_BOOK(n);
+  ['Kalshi','Polymarket US'].forEach(n=>{ const sr=LIVE_BOOK(n);
     const d=liveDesc(Object.assign({},base,{book:n,id:'ask:'+sr+':me'})); if(d) descs.push(d);
     if(opp){ const d2=liveDesc(Object.assign({},opp,{book:n,id:'ask:'+sr+':op'})); if(d2) descs.push(d2); } });
   if(!descs.length){ if(manual) msg.textContent='can\'t look this up — check the game, player, stat and line'; return; }
