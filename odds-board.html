@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="light dark">
 <meta name="theme-color" content="#087b44">
-<title>Augi Odds Board v0.9.3 — phone sync</title>
+<title>Augi Odds Board v0.9.4 — phone sync and BP ratings</title>
 <style>
   :root { color-scheme:light; --page:#f2f8f4; --panel:#fff; --ink:#13271e; --muted:#5c7066; --rule:#d8e8dd; --accent:#087b44; --soft:#e6f5ec; --good:#087b44; --warn:#925f0c; --red:#b92d35; }
   @media (prefers-color-scheme: dark) { :root {color-scheme:dark;--page:#0c1510;--panel:#15241b;--ink:#f0f7f2;--muted:#a0b8a9;--rule:#304b39;--accent:#6ee3a4;--soft:#1d3c2b;--good:#6ee3a4;--warn:#f2bc66;--red:#ff9299;} }
@@ -60,6 +60,7 @@
   .warn-text{color:var(--warn)}
   .preview{border:1px solid var(--rule);border-radius:8px;background:var(--page);padding:14px;max-height:360px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px}
   .ev-pos{color:var(--good);font-weight:800}.ev-neg{color:var(--red);font-weight:750}.ev-na{color:var(--muted)}
+  .bp-rating{white-space:nowrap;font-weight:800;color:var(--warn)}
 
   /* v0.6.1 expanded login + Board / Live Games / Settings */
   body:not(.connected) .wrap{max-width:840px;padding-top:clamp(30px,10vh,110px)}
@@ -179,7 +180,7 @@
 <body>
 <div class="wrap">
   <header class="head">
-    <div><div class="eyebrow">Augi · Multi-source screener · Cloudflare</div><h1>Odds Board <span class="pill">v0.9.3 · PHONE SYNC</span></h1></div>
+    <div><div class="eyebrow">Augi · Multi-source screener · Cloudflare</div><h1>Odds Board <span class="pill">v0.9.4 · PHONE SYNC</span></h1></div>
     <div class="head-right"><span class="chip">Log placed bets · no automatic betting</span><nav id="appNav" aria-label="App navigation" hidden><button id="boardTab" class="nav-tab" type="button" aria-current="page">Board</button><button id="liveTab" class="nav-tab" type="button" aria-current="false">Live Games</button><button id="parlayTab" class="nav-tab" type="button" aria-current="false">Parlay <span id="parlayCount">0</span></button><button id="betLogTab" class="nav-tab" type="button" aria-current="false">Bet log</button><button id="settingsTab" class="nav-tab" type="button">Settings</button></nav></div>
   </header>
   <section class="panel login" id="connPanel" data-area="login" aria-labelledby="conn-label">
@@ -437,8 +438,8 @@
     <div class="small-note">Passing singles show by default. Switch to Parlay legs for the 45–80% cover range; skipped and unverified rows remain available. Notes explain each decision.</div>
     <div id="sentinelStatus" class="small-note">Sentinel has not reviewed this cached Board yet. Load lines or restore a recent snapshot, then choose Clean cached Board.</div>
     <div class="overflow"><table>
-      <thead><tr><th>Game / start</th><th>Player</th><th>Market</th><th>Outcome</th><th>Line</th><th>Best odds</th><th>Book / source</th><th>Books</th><th>EV / Screen</th><th>Suggested stake</th><th>Actions / notes</th></tr></thead>
-      <tbody id="rows"><tr><td colspan="11" class="empty">No lines loaded yet.</td></tr></tbody>
+      <thead><tr><th>Game / start</th><th>Player</th><th>Market</th><th>Outcome</th><th>Line</th><th>Best odds</th><th>Book / source</th><th>Books</th><th>BP rating</th><th>EV / Screen</th><th>Suggested stake</th><th>Actions / notes</th></tr></thead>
+      <tbody id="rows"><tr><td colspan="12" class="empty">No lines loaded yet.</td></tr></tbody>
     </table></div>
     <p class="disclaimer">Prices are not guarantees or betting advice. Estimated EV uses provider fair odds or Pinnacle de-vig only when applicable; rows without verified reference inputs display —. Live lines, fees, and availability change. Never equate DFS pick'em multipliers with standard sportsbook American odds.</p>
   </section>
@@ -803,6 +804,7 @@ function referenceFairMap(game,market){
   function propLine(n){return Number.isFinite(n)?String(n):'—';}
   function dateLabel(s) {if(!s)return 'Date/time unavailable · not verified';const dt=new Date(s);return Number.isNaN(dt.getTime())?'Date/time not verified':dt.toLocaleString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit',timeZone:'America/Chicago',timeZoneName:'short'});}
   function putCell(tr,text,cls) {const td=document.createElement('td');if(cls)td.className=cls;td.textContent=text;tr.appendChild(td);return td;}
+  function bpRatingLabel(r){const n=Number(r.stars);return r.feed==='bp'&&r.stars!=null&&Number.isFinite(n)&&n>=1&&n<=5?'★ '+(Number.isInteger(n)?n:n.toFixed(1))+'/5':null;}
   function gameName(g) {return (g.away_team||'Away')+' @ '+(g.home_team||'Home');}
   function marketName(key) {return PROP_MARKETS[$('sport').value]?.find(([k])=>k===key)?.[1]||key.replace(/_/g,' ');}
   const photos=new Map();
@@ -1085,9 +1087,11 @@ function referenceFairMap(game,market){
     const bpWithoutModel=eligible.some(r=>r.feed==='bp')&&!eligible.some(r=>r.feed==='bp'&&Number.isFinite(r.modelProb));
     $('screenDiagnosis').textContent=counts.unverified?(counts.pass===0?'No verified singles to show. ':'')+'Unverified: '+topReasons.join(' / ')+(bpWithoutModel?' · BettingPros rows have no model probability. The updated Worker must be deployed, and the provider must supply that field; then rescan.':''):'';
     const screenView=$('screenView').value;const shown=screenView==='all'?eligible:eligible.filter(r=>screenView==='parlay'?isParlayReview(r):screenRow(r).kind===screenView);
-    if(!shown.length){const tr=document.createElement('tr');putCell(tr,eligible.length?'No '+(screenView==='pass'?'passing singles':'rows in this review category')+'. Choose Unverified, Skipped singles, or All statuses to inspect the '+eligible.length+' loaded selections.':working.length?'No rows match these filters. Adjust the market or search filters.':'No lines loaded. Scan a source on the Board first.','empty').colSpan=11;body.appendChild(tr);return;}
+    if(!shown.length){const tr=document.createElement('tr');putCell(tr,eligible.length?'No '+(screenView==='pass'?'passing singles':'rows in this review category')+'. Choose Unverified, Skipped singles, or All statuses to inspect the '+eligible.length+' loaded selections.':working.length?'No rows match these filters. Adjust the market or search filters.':'No lines loaded. Scan a source on the Board first.','empty').colSpan=12;body.appendChild(tr);return;}
     const frag=document.createDocumentFragment();
     for(const r of shown){const tr=document.createElement('tr');const rScreen=screenRow(r);tr.className='result-'+rScreen.kind;tr.title=rScreen.why;const game=putCell(tr,r.game);const sub=document.createElement('span');sub.className='sub';sub.textContent=dateLabel(r.start);game.append(sub);addPlayerCell(tr,r);putCell(tr,r.market);putCell(tr,r.outcome);putCell(tr,r.point);putCell(tr,priceLabel(r.price),'price');addBookCell(tr,r.bookKey,r.book+(combined?' · '+({odds:'Odds API',bp:'BettingPros',sgo:'SportsGameOdds',sb:'Sportsbook API',papi:'OddsPapi'}[r.feed]||r.feed):''));putCell(tr,String(r.books));
+      const rating=bpRatingLabel(r),ratingCell=putCell(tr,rating||'—',rating?'bp-rating':'');
+      ratingCell.title=rating?'BettingPros Bet Rating for the quoted selection (1–5 stars)':'No BettingPros star rating supplied for this selection';
       const modelEv=Number.isFinite(r.modelEv)?bpModelEvPercent(r.modelEv):null;
       const sc=screenRow(r), net=sc.math?.net*100, ev=Number.isFinite(net)?'Net '+(net>=0?'+':'')+net.toFixed(2)+'%':modelEv!==null?'BP model '+(modelEv>0?'+':'')+modelEv.toFixed(2)+'%':'EV —';
       const td=document.createElement('td');td.textContent=ev+' ';
@@ -1100,7 +1104,7 @@ function referenceFairMap(game,market){
       const detailBtn=document.createElement('button');detailBtn.className='smallbtn';detailBtn.type='button';detailBtn.style.marginLeft='5px';detailBtn.textContent='Notes';detailBtn.setAttribute('aria-expanded','false');act.append(detailBtn);
       const noteText=lineNotes.get(rowNoteKey(r));if(noteText){const mini=document.createElement('div');mini.className='note-mini';mini.textContent='Personal note saved';act.append(mini);}
       tr.append(act);frag.append(tr);
-      const detailTr=document.createElement('tr');detailTr.className='line-detail';detailTr.hidden=true;const noteTd=document.createElement('td');noteTd.colSpan=11;const noteWrap=document.createElement('div');noteWrap.className='line-detail-inner';
+      const detailTr=document.createElement('tr');detailTr.className='line-detail';detailTr.hidden=true;const noteTd=document.createElement('td');noteTd.colSpan=12;const noteWrap=document.createElement('div');noteWrap.className='line-detail-inner';
       const evidenceBlock=document.createElement('div');const eh=document.createElement('h4');eh.textContent='Screening & Sentinel notes';evidenceBlock.append(eh);
       for(const message of [sc.kind.toUpperCase()+': '+sc.why,'Source: '+r.feed+' · '+(r.reference||'No fair-price reference'),sc.math?'Cover '+coverLabel(sc.math.fair)+' · gross '+(sc.math.gross*100).toFixed(2)+'% · fee '+(sc.math.fee*100).toFixed(2)+'% · net '+(sc.math.net*100).toFixed(2)+'%':'No calculable fair value','Market: '+marketBucket(r)+' · '+selectionGroup(r).toUpperCase(),r._cachedAt?'Cached: '+new Date(r._cachedAt).toLocaleString('en-US',{timeZone:'America/Chicago'})+' Central':'Snapshot timestamp unavailable',sentinelEvidence.get(rowNoteKey(r))?.message||'Sentinel has not reviewed this selection yet.']){
         const p=document.createElement('p');p.textContent=message;evidenceBlock.append(p);}
@@ -1282,7 +1286,7 @@ function referenceFairMap(game,market){
           player,team:p.participant?.team||'',market:marketLabel,outcome:side.charAt(0).toUpperCase()+side.slice(1),photoUrl:p.participant?.headshot||null,athleteEspnId:p.participant?.espn_id||null,fantasyProsId:p.participant?.fantasypros_id||null,
           providerMarketId:p.market_id,providerEventId:p.event_id,sport:$('bpSport').value,
           point:propLine(offer.line),price:Number.isFinite(offer.odds)?offer.odds:null,
-          book:name,bookKey:lookup.key||name,app,books:1,modelProb,modelEv,mktProb,pairSum,stars:useMarket?p.market_bet_rating:offer.bet_rating,
+          book:name,bookKey:lookup.key||name,app,books:1,modelProb,modelEv,mktProb,pairSum,stars:useMarket?(p.market_bet_rating??offer.bet_rating):(offer.bet_rating??(String(p.projection?.recommended_side||'').toLowerCase()===side?p.projection?.bet_rating:null)),
           ev:null,reference:hasModel?'BettingPros model at this line'+(mktProb!=null?' · consensus devig check':' · no consensus check'):'No model probability for this side and line'});
       }
     }
