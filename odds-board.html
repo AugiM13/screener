@@ -2442,6 +2442,7 @@ updateEVInputs();calculateEV();
   $('refreshSports').addEventListener('click',()=>doAction('sports'));
   function returnToLogin(){
     document.body.classList.remove('connected');$('appNav').hidden=true;
+    gameHubFrame.removeAttribute('src');gameHubFrame.style.height='650px';
     $('pass').value='';$('loginStatus').textContent='Enter your passphrase to reconnect.';
     $('loginStatus').className='status';
     window.scrollTo({top:0,behavior:'instant'});
