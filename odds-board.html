@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="light dark">
 <meta name="theme-color" content="#087b44">
-<title>Augi Odds Board v0.9.6 — unified scan choices and sync status</title>
+<title>Augi Odds Board v0.9.7 — $1 outlier singles</title>
 <style>
   :root { color-scheme:light; --page:#f2f8f4; --panel:#fff; --ink:#13271e; --muted:#5c7066; --rule:#d8e8dd; --accent:#087b44; --soft:#e6f5ec; --good:#087b44; --warn:#925f0c; --red:#b92d35; }
   @media (prefers-color-scheme: dark) { :root {color-scheme:dark;--page:#0c1510;--panel:#15241b;--ink:#f0f7f2;--muted:#a0b8a9;--rule:#304b39;--accent:#6ee3a4;--soft:#1d3c2b;--good:#6ee3a4;--warn:#f2bc66;--red:#ff9299;} }
@@ -181,7 +181,7 @@
 <body>
 <div class="wrap">
   <header class="head">
-    <div><div class="eyebrow">Augi · Multi-source screener · Cloudflare</div><h1>Odds Board <span class="pill">v0.9.6 · PHONE SYNC</span></h1></div>
+    <div><div class="eyebrow">Augi · Multi-source screener · Cloudflare</div><h1>Odds Board <span class="pill">v0.9.7 · PHONE SYNC</span></h1></div>
     <div class="head-right"><span class="chip">Log placed bets · no automatic betting</span><button id="syncIndicator" type="button" class="sync-indicator off" aria-label="Sync off. Open sync settings" hidden>Sync Off</button><nav id="appNav" aria-label="App navigation" hidden><button id="boardTab" class="nav-tab" type="button" aria-current="page">Board</button><button id="liveTab" class="nav-tab" type="button" aria-current="false">Live Games</button><button id="parlayTab" class="nav-tab" type="button" aria-current="false">Parlay <span id="parlayCount">0</span></button><button id="betLogTab" class="nav-tab" type="button" aria-current="false">Bet log</button><button id="settingsTab" class="nav-tab" type="button">Settings</button></nav></div>
   </header>
   <section class="panel login" id="connPanel" data-area="login" aria-labelledby="conn-label">
@@ -347,7 +347,8 @@
     <div><label for="ruleBankroll">Bankroll ($)</label><input id="ruleBankroll" type="number" min="0" value="500" step="25"></div>
     <div><label for="ruleKelly">Kelly fraction (0–1)</label><input id="ruleKelly" type="number" min="0" max="1" value="0.25" step="0.05"></div>
     <div><label for="ruleHaircut">Edge haircut (0–1)</label><input id="ruleHaircut" type="number" min="0" max="1" value="0.5" step="0.1"></div>
-    <div><label for="ruleMinStake">Minimum bet ($)</label><input id="ruleMinStake" type="number" min="0" value="2.50" step="0.5"></div>
+    <div><label for="ruleMinStake">Regular single minimum ($)</label><input id="ruleMinStake" type="number" min="0" value="2.50" step="0.5"></div>
+    <div><label for="ruleOutlierStake">Outlier single bet ($)</label><input id="ruleOutlierStake" type="number" min="0.01" value="1.00" step="0.25"><span class="small-note">Default $1 = 0.4u when 1u is $2.50. Requires enough Kelly stake and room under game/day caps.</span></div>
     <div><label for="ruleMaxStake">Maximum bet ($)</label><input id="ruleMaxStake" type="number" min="0" value="10" step="0.5"></div>
     <div><label for="ruleGameCap">Maximum per game (% bankroll)</label><input id="ruleGameCap" type="number" min="0" max="100" value="2" step="0.5"></div>
     <div><label for="ruleDailyCap">Daily max (% bankroll)</label><input id="ruleDailyCap" type="number" min="0" max="100" value="10" step="1"></div>
@@ -423,7 +424,7 @@
     <div class="board-tools">
       <label><input id="passesOnly" type="checkbox" checked> PASS only by default</label>
       <label><input id="showLoggedPicks" type="checkbox"> Show picks already in Bet log</label>
-      <label for="screenView">Review lines</label><select id="screenView" style="min-width:172px;width:auto"><option value="pass">Passing singles</option><option value="skip">Skipped singles</option><option value="unverified">Unverified</option><option value="parlay">Parlay legs (45–80%)</option><option value="all">All statuses</option></select>
+      <label for="screenView">Review lines</label><select id="screenView" style="min-width:172px;width:auto"><option value="pass">Passing singles</option><option value="outlier">$1 outlier singles</option><option value="skip">Skipped singles</option><option value="unverified">Unverified</option><option value="parlay">Parlay legs (45–80%)</option><option value="all">All statuses</option></select>
       <label for="globalSearch">Search combined results</label><input id="globalSearch" type="search" style="width:140px;min-height:35px" placeholder="Player / book">
       <button id="showPhotos" type="button" class="smallbtn">Refresh player photos (ESPN)</button>
       <span class="stake-toggle" role="group" aria-label="Stake display"><button id="stakeUnits" type="button" aria-pressed="true">Units</button><button id="stakeDollars" type="button" aria-pressed="false">Dollars</button></span>
@@ -981,9 +982,9 @@ function referenceFairMap(game,market){
     const math=kitMath(r,price,r.book);
     if(!math)return bad('unverified','No valid fair probability at this exact line; a model EV alone cannot replace the missing probability.');
     const bank=Number($('ruleBankroll').value),kelly=Number($('ruleKelly').value),shrink=Number($('ruleHaircut').value),weight=Number($('ruleModelWeight').value);
-    const min=Number($('ruleMinStake').value),max=Number($('ruleMaxStake').value),gameCap=Number($('ruleGameCap').value),dayCap=Number($('ruleDailyCap').value);
+    const min=Number($('ruleMinStake').value),outlierStake=Number($('ruleOutlierStake').value),max=Number($('ruleMaxStake').value),gameCap=Number($('ruleGameCap').value),dayCap=Number($('ruleDailyCap').value);
     const singleMin=Number($('ruleSingleMin').value)/100,singleMax=Number($('ruleSingleMax').value)/100;
-    if(![bank,kelly,shrink,weight,min,max,gameCap,dayCap,singleMin,singleMax].every(Number.isFinite)||bank<=0||kelly<0||kelly>1||shrink<0||shrink>1||weight<0||weight>1||min<0||max<min||gameCap<0||dayCap<0||singleMin>singleMax)return bad('unverified','Invalid screening or stake settings.');
+    if(![bank,kelly,shrink,weight,min,outlierStake,max,gameCap,dayCap,singleMin,singleMax].every(Number.isFinite)||bank<=0||kelly<0||kelly>1||shrink<0||shrink>1||weight<0||weight>1||min<0||outlierStake<=0||outlierStake>max||max<min||gameCap<0||dayCap<0||singleMin>singleMax)return bad('unverified','Invalid screening or stake settings.');
     const key=rowKey(r),day=gameDay(r);
     const duplicate=placedSingles.some(x=>x.key===key&&x.day===day);
     const samePlayer=placedSingles.some(x=>x.game===r.game&&x.day===day&&x.player===r.player&&r.player&&r.player!=='—');
@@ -991,24 +992,26 @@ function referenceFairMap(game,market){
     const inDay=placedSingles.filter(x=>x.day===day).reduce((sum,x)=>sum+x.stake,0);
     const gameRoom=Math.max(0,bank*gameCap/100-inGame),dayRoom=Math.max(0,bank*dayCap/100-inDay);
     const outlier=math.net>.15||(math.market!=null&&math.fair-math.market>.08);
+    const requiredStake=outlier?outlierStake:min;
     const belowMarket=math.market!=null&&((math.market/math.offered-1-math.fee)/(1+math.fee))<=0;
     let stake=Math.min(math.raw,max,gameRoom,dayRoom);
-    if(outlier||(math.market==null&&Number.isFinite(r.modelProb)))stake=Math.min(stake,min);
+    if(outlier)stake=Math.min(stake,outlierStake);
+    else if(math.market==null&&Number.isFinite(r.modelProb))stake=Math.min(stake,min);
     const hard=[];
     if(duplicate||loggedPick(r))hard.push('already logged');
     if(samePlayer)hard.push('one single per player in this game');
     if(outlier&&belowMarket)hard.push('model outlier below market');
     if(math.gross>Number($('ruleGrossMax').value)/100)hard.push('gross EV over ceiling');
     if(Number.isFinite(r.pairSum)&&Math.abs(r.pairSum-1)>.02)hard.push('model sides do not devig cleanly');
-    if(gameRoom<min||dayRoom<min)hard.push('game/day bankroll cap reached');
+    if(gameRoom<requiredStake||dayRoom<requiredStake)hard.push('game/day bankroll cap reached');
     const parlay=hard.length===0&&math.fair>=.45&&math.fair<=.80&&math.net>0;
     const reasons=[...hard];
     if(price<Number($('ruleMinOdds').value)||price>Number($('ruleMaxOdds').value))reasons.push('outside single odds range');
     if(/prizepicks|underdog|sleeper|pick.?6/i.test(r.book||''))reasons.push('DFS payout is not a standard single price');
     if(math.fair<singleMin||math.fair>singleMax)reasons.push('outside single cover range');
     if(math.net<Number($('ruleNetFloor').value)/100)reasons.push('net EV under single floor');
-    if(stake<min||stake<=0)reasons.push('Kelly stake below minimum');
-    return {kind:reasons.length?'skip':'pass',why:reasons.length?reasons.join('; '):'Kit fee-adjusted EV and fractional Kelly passed; confirm the actual price before placing.',stake:reasons.length?0:+stake.toFixed(2),parlay,math};
+    if(stake+1e-9<requiredStake||stake<=0)reasons.push('Kelly stake below '+(outlier?'outlier':'regular')+' minimum');
+    return {kind:reasons.length?'skip':'pass',why:reasons.length?reasons.join('; '):outlier?'Outlier: capped at $'+outlierStake.toFixed(2)+' after fee-adjusted EV and Kelly checks; confirm the price.':'Kit fee-adjusted EV and fractional Kelly passed; confirm the actual price before placing.',stake:reasons.length?0:+stake.toFixed(2),parlay,math,outlier};
   }
   function isParlayReview(r){return screenRow(r).parlay;}
   let singleSelection=null;
@@ -1026,7 +1029,7 @@ function referenceFairMap(game,market){
     for(const entry of [...placedSingles].reverse()){
       const row=document.createElement('div');row.className='log-card';const label=document.createElement('div');label.className='slip-label';
       const title=document.createElement('strong');title.textContent=[entry.player,entry.market,entry.outcome,entry.point].filter(x=>x&&x!=='—').join(' · ');
-      const meta=document.createElement('span');meta.className='sub';meta.textContent=entry.day+' · '+entry.game+' · '+entry.book+' '+priceLabel(entry.odds)+' · $'+entry.stake.toFixed(2)+' · net EV '+(entry.netPct>=0?'+':'')+entry.netPct.toFixed(2)+'%'+(entry.offList?' · below current EV floor':'');
+      const meta=document.createElement('span');meta.className='sub';meta.textContent=entry.day+' · '+entry.game+' · '+entry.book+' '+priceLabel(entry.odds)+' · $'+entry.stake.toFixed(2)+(entry.outlier?' · OUTLIER':'')+' · net EV '+(entry.netPct>=0?'+':'')+entry.netPct.toFixed(2)+'%'+(entry.offList?' · below current EV floor':'');
       label.append(title,meta,betResultBadge(entry));row.append(label);addSingleResultControls(entry,row);
       const remove=document.createElement('button');remove.type='button';remove.className='smallbtn';remove.textContent='Remove record';remove.addEventListener('click',()=>{if(!window.confirm('Remove this placed-bet record?'))return;placedSingles=placedSingles.filter(x=>x.id!==entry.id);persistSingles();});row.append(remove);host.append(row);
     }
@@ -1042,7 +1045,7 @@ function referenceFairMap(game,market){
     const actual=kitMath(r,odds,book);if(!actual){$('singleMessage').textContent='Could not value these odds at the selected line.';return;}
     const floor=Number($('ruleNetFloor').value)/100,offList=actual.net<floor;
     if(offList&&$('saveSingle').dataset.confirm!=='yes'){$('saveSingle').dataset.confirm='yes';$('singleMessage').textContent='Actual price is below the net EV floor ('+(actual.net*100).toFixed(2)+'%). Press Save again to record the placed bet as off-list.';return;}
-    const entry={id:Date.now()+':'+Math.random().toString(36).slice(2),key:rowKey(r),day:gameDay(r),game:r.game,player:r.player,team:r.team||'',market:r.market,outcome:r.outcome,point:r.point,book,odds,stake:+stake.toFixed(2),netPct:actual.net*100,offList,at:new Date().toISOString(),start:r.start||null,sport:sourceSport(r),result:'pending',payout:null};
+    const entry={id:Date.now()+':'+Math.random().toString(36).slice(2),key:rowKey(r),day:gameDay(r),game:r.game,player:r.player,team:r.team||'',market:r.market,outcome:r.outcome,point:r.point,book,odds,stake:+stake.toFixed(2),netPct:actual.net*100,offList,outlier:screenRow(r).outlier,at:new Date().toISOString(),start:r.start||null,sport:sourceSport(r),result:'pending',payout:null};
     placedSingles.push(entry);singleSelection=null;$('singleEditor').hidden=true;persistSingles();goTab('betlog');
   });
   renderSingleLog();
@@ -1104,12 +1107,13 @@ function referenceFairMap(game,market){
     const eligible=$('showLoggedPicks').checked?matching:matching.filter(r=>!loggedPick(r));
     const counts={pass:0,skip:0,unverified:0},reasons=new Map();eligible.forEach(r=>{const sc=screenRow(r);counts[sc.kind]++;if(sc.kind==='unverified')reasons.set(sc.why,(reasons.get(sc.why)||0)+1);});
     const parlayCount=eligible.filter(isParlayReview).length;
-    $('screenSummary').textContent=counts.pass+' passing singles · '+counts.skip+' skipped · '+counts.unverified+' unverified · '+parlayCount+' parlay legs of '+eligible.length+' available rows'+(loggedCount?' · '+loggedCount+' already logged'+($('showLoggedPicks').checked?' shown':' hidden'):'');
+    const outlierCount=eligible.filter(r=>{const sc=screenRow(r);return sc.kind==='pass'&&sc.outlier;}).length;
+    $('screenSummary').textContent=counts.pass+' passing singles ('+outlierCount+' outliers) · '+counts.skip+' skipped · '+counts.unverified+' unverified · '+parlayCount+' parlay legs of '+eligible.length+' available rows'+(loggedCount?' · '+loggedCount+' already logged'+($('showLoggedPicks').checked?' shown':' hidden'):'');
     if(freshRows&&counts.pass===0&&counts.unverified>0&&$('screenView').value==='pass'){$('screenView').value='unverified';$('passesOnly').checked=false;}
     const topReasons=[...reasons].sort((a,b)=>b[1]-a[1]).slice(0,2).map(([reason,count])=>count+' · '+reason);
     const bpWithoutModel=eligible.some(r=>r.feed==='bp')&&!eligible.some(r=>r.feed==='bp'&&Number.isFinite(r.modelProb));
     $('screenDiagnosis').textContent=counts.unverified?(counts.pass===0?'No verified singles to show. ':'')+'Unverified: '+topReasons.join(' / ')+(bpWithoutModel?' · BettingPros rows have no model probability. The updated Worker must be deployed, and the provider must supply that field; then rescan.':''):'';
-    const screenView=$('screenView').value;const shown=screenView==='all'?eligible:eligible.filter(r=>screenView==='parlay'?isParlayReview(r):screenRow(r).kind===screenView);
+    const screenView=$('screenView').value;const shown=screenView==='all'?eligible:eligible.filter(r=>screenView==='parlay'?isParlayReview(r):screenView==='outlier'?(screenRow(r).kind==='pass'&&screenRow(r).outlier):screenRow(r).kind===screenView);
     if(!shown.length){const tr=document.createElement('tr');putCell(tr,eligible.length?'No '+(screenView==='pass'?'passing singles':'rows in this review category')+'. Choose Unverified, Skipped singles, or All statuses to inspect the '+eligible.length+' available selections.':loggedCount?'All matching picks are already in Bet log. Turn on “Show picks already in Bet log” to review them.':working.length?'No rows match these filters. Adjust the market or search filters.':'No lines loaded. Scan a source on the Board first.','empty').colSpan=12;body.appendChild(tr);return;}
     const frag=document.createDocumentFragment();
     for(const r of shown){const tr=document.createElement('tr');const rScreen=screenRow(r);tr.className='result-'+rScreen.kind;tr.title=rScreen.why;const game=putCell(tr,r.game);const sub=document.createElement('span');sub.className='sub';sub.textContent=dateLabel(r.start);game.append(sub);addPlayerCell(tr,r);putCell(tr,r.market);putCell(tr,r.outcome);putCell(tr,r.point);putCell(tr,priceLabel(r.price),'price');addBookCell(tr,r.bookKey,r.book+(combined?' · '+({odds:'Odds API',bp:'BettingPros',sgo:'SportsGameOdds',sb:'Sportsbook API',papi:'OddsPapi'}[r.feed]||r.feed):''));putCell(tr,String(r.books));
@@ -1119,6 +1123,7 @@ function referenceFairMap(game,market){
       const sc=screenRow(r), net=sc.math?.net*100, ev=Number.isFinite(net)?'Net '+(net>=0?'+':'')+net.toFixed(2)+'%':modelEv!==null?'BP model '+(modelEv>0?'+':'')+modelEv.toFixed(2)+'%':'EV —';
       const td=document.createElement('td');td.textContent=ev+' ';
       const flag=document.createElement('span');flag.className='line-state '+sc.kind;flag.textContent=sc.kind.toUpperCase();flag.title=sc.why+(r.reference?' · '+r.reference:'');td.append(flag);tr.append(td);
+      if(sc.kind==='pass'&&sc.outlier){const tag=document.createElement('span');tag.className='line-state skip';tag.textContent='OUTLIER · $'+Number($('ruleOutlierStake').value).toFixed(2);tag.title='Outlier single stake, separate from your regular unit';td.append(tag);}
       if(modelEv!==null&&Number.isFinite(net)){const sub=document.createElement('span');sub.className='sub';sub.textContent='BP model '+(modelEv>=0?'+':'')+modelEv.toFixed(2)+'% · cover '+coverLabel(sc.math?.fair);td.append(sub);}
       putCell(tr,stakeString(sc.stake));
       const act=document.createElement('td');
@@ -1694,7 +1699,7 @@ updateEVInputs();calculateEV();
     view.type=b.dataset.kind;showView();$('source-label').scrollIntoView({block:'start',behavior:'smooth'});
   }));
   // v0.5.2: no keys or PASS are persisted. EV rules only are saved locally.
-  const RULE_IDS=['ruleMinOdds','ruleMaxOdds','ruleSingleMin','ruleSingleMax','ruleNetFloor','ruleGrossMax','ruleBankroll','ruleKelly','ruleHaircut','ruleMinStake','ruleMaxStake','ruleGameCap','ruleDailyCap','ruleModelWeight','ruleBoardFee','ruleKalshiFee','rulePolyFee'];
+  const RULE_IDS=['ruleMinOdds','ruleMaxOdds','ruleSingleMin','ruleSingleMax','ruleNetFloor','ruleGrossMax','ruleBankroll','ruleKelly','ruleHaircut','ruleMinStake','ruleOutlierStake','ruleMaxStake','ruleGameCap','ruleDailyCap','ruleModelWeight','ruleBoardFee','ruleKalshiFee','rulePolyFee'];
   const RULE_DEFAULTS=Object.fromEntries(RULE_IDS.map(id=>[id,$(id).value]));
   try { const saved=JSON.parse(localStorage.getItem('augi.evRules.v052')||'{}');
     for(const id of RULE_IDS){if(saved[id]!==undefined)$(id).value=String(saved[id]);}
