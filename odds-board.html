@@ -1874,7 +1874,7 @@ updateEVInputs();calculateEV();
   window.addEventListener('message',event=>{
     if(event.origin===location.origin&&event.source===gameHubFrame.contentWindow&&event.data?.type==='pp-game-hub-height'){
       const height=Number(event.data.height);
-      if(Number.isFinite(height)&&height>=300&&height<=12000)gameHubFrame.style.height=Math.ceil(height+4)+'px';
+      if(Number.isFinite(height)&&height>=300&&height<=120000)gameHubFrame.style.height=Math.ceil(height+4)+'px';
       return;
     }
     if(event.origin!==location.origin||!gameHubWindows.has(event.source)||event.data?.type!=='pp-game-auth-request'||typeof event.data.nonce!=='string'||!/^[-\w]{12,80}$/.test(event.data.nonce)||!document.body.classList.contains('connected'))return;
