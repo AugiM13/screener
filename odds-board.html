@@ -128,8 +128,8 @@
   .board-tools{display:flex;align-items:center;gap:11px;flex-wrap:wrap;margin-bottom:12px}.board-tools label{display:flex;align-items:center;gap:6px;margin:0}.board-tools input[type=checkbox]{width:18px;height:18px;min-height:18px}
   .sync-indicator{border-radius:99px!important;padding:7px 12px!important;font-size:12px!important;font-weight:800!important}.sync-indicator.on{background:#087b44!important;color:#fff!important}.sync-indicator.off{background:var(--soft)!important;color:var(--muted)!important}
   .slip-row{border:1px solid var(--rule);border-radius:9px;padding:11px;display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:9px}.slip-label{flex:1;min-width:0}.slip-row .sub{font-size:11px}.slip-amt{font-size:19px;font-weight:850;color:var(--good)}
-  .cover-1{--cover-color:#b04b27;--cover-bg:#fff0e8}.cover-2{--cover-color:#896000;--cover-bg:#fff7d9}.cover-3{--cover-color:#0873a3;--cover-bg:#e5f5fc}.cover-4{--cover-color:#138345;--cover-bg:#e5f7ed}
-  @media(prefers-color-scheme:dark){.cover-1{--cover-color:#ffad88;--cover-bg:#38231e}.cover-2{--cover-color:#ffd373;--cover-bg:#342b17}.cover-3{--cover-color:#80d5fa;--cover-bg:#153343}.cover-4{--cover-color:#86edaa;--cover-bg:#173626}}
+  .cover-1{--cover-color:#ad4e90;--cover-bg:#fcebf7}.cover-2{--cover-color:#896000;--cover-bg:#fff7d9}.cover-3{--cover-color:#0873a3;--cover-bg:#e5f5fc}.cover-4{--cover-color:#138345;--cover-bg:#e5f7ed}.cover-5{--cover-color:#ad4753;--cover-bg:#ffedf0}.cover-6{--cover-color:#4f45a6;--cover-bg:#eeeaff}
+  @media(prefers-color-scheme:dark){.cover-1{--cover-color:#f4a8d7;--cover-bg:#38243a}.cover-2{--cover-color:#ffd373;--cover-bg:#342b17}.cover-3{--cover-color:#80d5fa;--cover-bg:#153343}.cover-4{--cover-color:#86edaa;--cover-bg:#173626}.cover-5{--cover-color:#ff9da9;--cover-bg:#3e222a}.cover-6{--cover-color:#c4b5fd;--cover-bg:#272344}}
   .cover-chip{display:inline-block;border:1px solid var(--cover-color);border-radius:99px;padding:3px 8px;background:var(--cover-bg);color:var(--cover-color);font-size:11px;font-weight:800;white-space:nowrap}
   .slip-row[class*="cover-"]{border-left:5px solid var(--cover-color);background:var(--cover-bg)}
   #slipList[class*="cover-"]{border:2px solid var(--cover-color);border-radius:10px;padding:9px}
@@ -337,7 +337,7 @@
 </section>
 <section class="panel" data-area="settings" aria-labelledby="rules-title">
   <div class="bar"><h2 id="rules-title">Screening rules &amp; stake sizing</h2><span class="chip">Saved in this browser · no secrets</span></div>
-  <p class="small-note">The kit's fair probability, fee-adjusted EV, market blend and fractional Kelly screen singles. Logged singles count toward game and daily limits. The parlay tab has its own 45–80% cover range. Provider fields and exact lines must be present; missing model probability stays UNVERIFIED.</p>
+  <p class="small-note">The kit's fair probability, fee-adjusted EV, market blend and fractional Kelly screen singles. Logged singles count toward game and daily limits. Feeling Lucky is an optional 45–55% single lane on the Board; the parlay tab has its own 45–80% cover range. Provider fields and exact lines must be present; missing model probability stays UNVERIFIED.</p>
   <div class="grid" style="margin-top:14px">
     <div><label for="ruleMinOdds">Odds floor</label><input id="ruleMinOdds" type="number" value="-300" step="5"></div>
     <div><label for="ruleMaxOdds">Odds ceiling</label><input id="ruleMaxOdds" type="number" value="500" step="5"></div>
@@ -441,6 +441,7 @@
       <label><input id="passesOnly" type="checkbox" checked> PASS only by default</label>
       <label><input id="showLoggedPicks" type="checkbox"> Show picks already in Bet log</label>
       <label><input id="sweetOnly" type="checkbox"> 🎯 Sweet Spot only</label>
+      <label><input id="feelingLucky" type="checkbox"> 🍀 Feeling Lucky singles</label>
       <label for="screenView">Review lines</label><select id="screenView" style="min-width:172px;width:auto"><option value="pass">Passing singles</option><option value="outlier">$1 outlier singles</option><option value="skip">Skipped singles</option><option value="unverified">Unverified</option><option value="parlay">Parlay legs (45–80%)</option><option value="all">All statuses</option></select>
       <label for="globalSearch">Search combined results</label><input id="globalSearch" type="search" style="width:140px;min-height:35px" placeholder="Player / book">
       <button id="savedPicks" type="button" class="smallbtn">Saved picks · all sports</button>
@@ -449,13 +450,14 @@
       
       <span id="screenSummary" class="hint">Showing screened PASS results by default</span>
     </div>
+    <div class="cover-legend" aria-label="Projected cover color ranges"><span class="cover-chip cover-5">Long Shot · &lt;45%</span><span class="cover-chip cover-1">Feeling Lucky · 45–&lt;55%</span><span class="cover-chip cover-2">Balanced · 55–&lt;65%</span><span class="cover-chip cover-3">Favored · 65–&lt;75%</span><span class="cover-chip cover-4">Heavy Favorite · 75–80%</span><span class="cover-chip cover-6">High Cover · &gt;80%</span></div>
     <p id="screenDiagnosis" class="small-note" aria-live="polite"></p>
     <div class="sentinel-main">
       <button id="sentinelRun" type="button" class="primary">Sentinel · Clean cached Board</button>
       <label><input id="sentinelFree" type="checkbox" checked> Also search Kalshi + Polymarket US (free public listings)</label>
       <span class="small-note">Uses already loaded lines; <strong>0 BettingPros requests</strong>. Checks your Settings, timestamps, and available evidence. Free exchange candidates are not treated as verified fair prices.</span>
     </div>
-    <div class="small-note">Passing singles show by default. Switch to Parlay legs for the 45–80% cover range; skipped and unverified rows remain available. Notes explain each decision.</div>
+    <div class="small-note">Passing singles show by default. Turn on Feeling Lucky to allow qualified 45–&lt;55% cover picks as optional singles; the usual EV, odds, stake and bankroll checks still apply. The parlay lane remains 45–80% regardless of this toggle. Colors outside that lane are informational. Notes explain each decision.</div>
     <div id="sentinelStatus" class="small-note">Sentinel has not reviewed this cached Board yet. Load lines or restore a recent snapshot, then choose Clean cached Board.</div>
     <div class="overflow"><table>
       <thead><tr><th>Game / start</th><th>Player</th><th>Market</th><th>Outcome</th><th>Line</th><th>Best odds</th><th>Book / source</th><th>Books</th><th>BP rating</th><th>EV / Screen</th><th>Suggested stake</th><th>Actions / notes</th></tr></thead>
@@ -508,7 +510,7 @@
   <section class="panel" data-area="parlay" aria-labelledby="parlay-title">
     <div class="bar"><h2 id="parlay-title">Parlay / pick'em draft</h2><span class="chip">App payout · draft only</span></div>
     <p class="small-note">Each leg needs a 45–80% projected cover and positive net EV. Colors show each leg's cover band, not the full slip's win chance. Verify the exact line and payout in your app; this draft is never submitted automatically.</p>
-    <div class="cover-legend"><span class="cover-chip cover-1">Close Call · 45–54%</span><span class="cover-chip cover-2">Balanced · 55–64%</span><span class="cover-chip cover-3">Favored · 65–74%</span><span class="cover-chip cover-4">Heavy Favorite · 75–80%</span></div>
+    <div class="cover-legend"><span class="cover-chip cover-5">Long Shot · &lt;45% (outside parlay)</span><span class="cover-chip cover-1">Feeling Lucky · 45–&lt;55%</span><span class="cover-chip cover-2">Balanced · 55–&lt;65%</span><span class="cover-chip cover-3">Favored · 65–&lt;75%</span><span class="cover-chip cover-4">Heavy Favorite · 75–80%</span><span class="cover-chip cover-6">High Cover · &gt;80% (outside parlay)</span></div>
     <div class="grid" style="margin-top:14px">
       <div><label for="slipApp">Platform</label><select id="slipApp"><option>PrizePicks</option><option>Underdog</option><option>Sleeper</option><option>DraftKings Pick 6</option><option>Kalshi</option><option>Sportsbook / other</option></select></div>
       <div><label for="slipType">Slip type</label><select id="slipType"><option value="power">Power (all must win)</option><option value="flex">Flex (partial payouts possible)</option><option value="standard">Standard parlay</option></select></div>
@@ -975,9 +977,9 @@ function referenceFairMap(game,market){
   let logVisibleMonth=logSelectedDate.slice(0,7);
   function visibleLogEntries(entries){return $('logAllDates').checked?entries:entries.filter(e=>placedPeriod(e.at||new Date().toISOString(),'day')===logSelectedDate);}
   try{const saved=JSON.parse(localStorage.getItem(SINGLE_LOG_KEY)||'[]');if(Array.isArray(saved))placedSingles=saved.filter(x=>x&&x.key&&Number.isFinite(x.stake));}catch(_){}
-  const coverBand=p=>p==null||p<.45||p>.80?0:Math.round(p*1000)/10<55?1:Math.round(p*1000)/10<65?2:Math.round(p*1000)/10<75?3:4;
-  const COVER_NAMES=['Unknown / outside range','Close Call','Balanced','Favored','Heavy Favorite'];
-  const COVER_RANGES=['Unknown / outside 45–80%','45–54%','55–64%','65–74%','75–80%'];
+  const coverBand=p=>!Number.isFinite(p)||p<0||p>1?0:p<.45?5:p<.55?1:p<.65?2:p<.75?3:p<=.80?4:6;
+  const COVER_NAMES=['Unknown cover','Feeling Lucky','Balanced','Favored','Heavy Favorite','Long Shot','High Cover'];
+  const COVER_RANGES=['Unknown cover','45–<55%','55–<65%','65–<75%','75–80%','<45%','>80%'];
   const coverLabel=p=>Number.isFinite(p)?(p*100).toFixed(1)+'%':'—';
   function kitFee(book,offered){
     const name=String(book||'').toLowerCase();
@@ -1053,13 +1055,15 @@ function referenceFairMap(game,market){
     if(Number.isFinite(r.pairSum)&&Math.abs(r.pairSum-1)>.02)hard.push('model sides do not devig cleanly');
     if(gameRoom<requiredStake||dayRoom<requiredStake)hard.push('game/day bankroll cap reached');
     const parlay=hard.length===0&&math.fair>=.45&&math.fair<=.80&&math.net>0;
+    const luckyCandidate=$('feelingLucky').checked&&parlay&&math.fair<.55&&(math.fair<singleMin||math.fair>singleMax);
     const reasons=[...hard];
     if(price<Number($('ruleMinOdds').value)||price>Number($('ruleMaxOdds').value))reasons.push('outside single odds range');
     if(/prizepicks|underdog|sleeper|pick.?6/i.test(r.book||''))reasons.push('DFS payout is not a standard single price');
-    if(math.fair<singleMin||math.fair>singleMax)reasons.push('outside single cover range');
+    if((math.fair<singleMin||math.fair>singleMax)&&!luckyCandidate)reasons.push('outside single cover range');
     if(math.net<Number($('ruleNetFloor').value)/100)reasons.push('net EV under single floor');
     if(stake+1e-9<requiredStake||stake<=0)reasons.push('Kelly stake below '+(outlier?'outlier':'regular')+' minimum');
-    return {kind:reasons.length?'skip':'pass',why:reasons.length?reasons.join('; '):outlier?'Outlier: capped at $'+outlierStake.toFixed(2)+' after fee-adjusted EV and Kelly checks; confirm the price.':'Kit fee-adjusted EV and fractional Kelly passed; confirm the actual price before placing.',stake:reasons.length?0:+stake.toFixed(2),parlay,math,outlier};
+    const lucky=!reasons.length&&luckyCandidate;
+    return {kind:reasons.length?'skip':'pass',why:reasons.length?reasons.join('; '):lucky?'Feeling Lucky single: 45–<55% cover, positive net EV and the regular odds, EV, stake and bankroll checks passed; confirm the actual price.':outlier?'Outlier: capped at $'+outlierStake.toFixed(2)+' after fee-adjusted EV and Kelly checks; confirm the price.':'Kit fee-adjusted EV and fractional Kelly passed; confirm the actual price before placing.',stake:reasons.length?0:+stake.toFixed(2),parlay,math,outlier,lucky};
   }
   function isSweetSpot(r,sc=screenRow(r)){
     if(sc.kind!=='pass'||sc.outlier||!(sc.stake>0)||r.stars==null||!Number.isFinite(Number(r.stars))||!sc.math)return false;
@@ -1075,7 +1079,7 @@ function referenceFairMap(game,market){
     singleSelection=r;$('singleEditor').hidden=false;
     $('singlePick').textContent=[r.player,r.market,r.outcome,r.point,r.game].filter(x=>x&&x!=='—').join(' · ')+' · projected cover '+coverLabel(sc.math.fair);
     $('singleBook').value=r.book;$('singleOdds').value=r.price;$('singleStake').value=sc.stake.toFixed(2);
-    $('singleMessage').textContent='Enter the book, odds and amount you actually placed. Saving here does not submit a bet.';
+    $('singleMessage').textContent=(sc.lucky?'Feeling Lucky · optional single. ':'')+'Enter the book, odds and amount you actually placed. Saving here does not submit a bet.';
     $('saveSingle').dataset.confirm='';$('singleEditor').scrollIntoView({behavior:'smooth',block:'center'});
   }
   function renderSingleLog(){
@@ -1085,7 +1089,7 @@ function referenceFairMap(game,market){
     for(const entry of [...entries].reverse()){
       const row=document.createElement('div');row.className='log-card';const label=document.createElement('div');label.className='slip-label';
       const title=document.createElement('strong');title.textContent=[entry.player,entry.market,entry.outcome,entry.point].filter(x=>x&&x!=='—').join(' · ');
-      const meta=document.createElement('span');meta.className='sub';meta.textContent=placedPeriod(entry.at,'day')+' placed · '+entry.day+' game · '+entry.game+' · '+entry.book+' '+priceLabel(entry.odds)+' · $'+entry.stake.toFixed(2)+(entry.outlier?' · OUTLIER':'')+' · '+(Number.isFinite(entry.netPct)?'net EV '+(entry.netPct>=0?'+':'')+entry.netPct.toFixed(2)+'%':'original model EV unknown')+(entry.offList?' · below current EV floor':'')+(Number.isFinite(entry.quotedPayout)?' · quoted return '+money(entry.quotedPayout):'');
+      const meta=document.createElement('span');meta.className='sub';meta.textContent=placedPeriod(entry.at,'day')+' placed · '+entry.day+' game · '+entry.game+' · '+entry.book+' '+priceLabel(entry.odds)+' · $'+entry.stake.toFixed(2)+(entry.lucky?' · FEELING LUCKY':'')+(entry.outlier?' · OUTLIER':'')+' · '+(Number.isFinite(entry.netPct)?'net EV '+(entry.netPct>=0?'+':'')+entry.netPct.toFixed(2)+'%':'original model EV unknown')+(entry.offList?' · below current EV floor':'')+(Number.isFinite(entry.quotedPayout)?' · quoted return '+money(entry.quotedPayout):'');
       label.append(title,meta,betResultBadge(entry));row.append(label);addSingleResultControls(entry,row);
       const remove=document.createElement('button');remove.type='button';remove.className='smallbtn';remove.textContent='Remove record';remove.addEventListener('click',()=>{if(!window.confirm('Remove this placed-bet record?'))return;placedSingles=placedSingles.filter(x=>x.id!==entry.id);persistSingles();});row.append(remove);host.append(row);
     }
@@ -1102,7 +1106,8 @@ function referenceFairMap(game,market){
     const actual=kitMath(r,odds,book);if(!actual){$('singleMessage').textContent='Could not value these odds at the selected line.';return;}
     const floor=Number($('ruleNetFloor').value)/100,offList=actual.net<floor;
     if(offList&&$('saveSingle').dataset.confirm!=='yes'){$('saveSingle').dataset.confirm='yes';$('singleMessage').textContent='Actual price is below the net EV floor ('+(actual.net*100).toFixed(2)+'%). Press Save again to record the placed bet as off-list.';return;}
-    const entry={id:Date.now()+':'+Math.random().toString(36).slice(2),key:rowKey(r),day:gameDay(r),game:r.game,player:r.player,team:r.team||'',market:r.market,outcome:r.outcome,point:r.point,book,odds,stake:+stake.toFixed(2),netPct:actual.net*100,offList,outlier:screenRow(r).outlier,cover:actual.fair,stars:r.stars??null,sweet:isSweetSpot({...r,price:odds},screenRow(r)),at:new Date().toISOString(),start:r.start||null,sport:sourceSport(r),result:'pending',payout:null};
+    const decision=screenRow(r);
+    const entry={id:Date.now()+':'+Math.random().toString(36).slice(2),key:rowKey(r),day:gameDay(r),game:r.game,player:r.player,team:r.team||'',market:r.market,outcome:r.outcome,point:r.point,book,odds,stake:+stake.toFixed(2),netPct:actual.net*100,offList,outlier:decision.outlier,lucky:decision.lucky,cover:actual.fair,stars:r.stars??null,sweet:isSweetSpot({...r,price:odds},decision),at:new Date().toISOString(),start:r.start||null,sport:sourceSport(r),result:'pending',payout:null};
     placedSingles.push(entry);singleSelection=null;$('singleEditor').hidden=true;persistSingles();goTab('betlog');
   });
   renderSingleLog();
@@ -1149,14 +1154,14 @@ function referenceFairMap(game,market){
 
   let settingsInitialized=false;
   const VIEW_STORE='augi.display.v062';
-  function viewPrefs(){return {stake:$('displayStake').value,sources:$('displaySources').value,unit:Number($('unitValue').value)}};
+  function viewPrefs(){return {stake:$('displayStake').value,sources:$('displaySources').value,unit:Number($('unitValue').value),lucky:$('feelingLucky').checked}};
   function stakeString(amount){
     if(!Number.isFinite(amount))return '—';
     const p=viewPrefs();return p.stake==='cash'?'$'+amount.toFixed(2):(p.unit>0?(amount/p.unit).toFixed(2)+'u':'—');
   }
   function refreshStakeControls(){const u=$('displayStake').value==='units';$('stakeUnits').setAttribute('aria-pressed',String(u));$('stakeDollars').setAttribute('aria-pressed',String(!u));$('displayNote').textContent='1u = $'+Number($('unitValue').value||2.5).toFixed(2)+'. '+($('displaySources').value==='combined'?'Combined view displays cached lines from sources you already scanned, with source labels. Different markets are NOT merged automatically.':'By Source shows only the selected API.');}
   function saveDisplay(){const data=viewPrefs();if(!Number.isFinite(data.unit)||data.unit<=0){$('unitValue').value='2.50';}try{localStorage.setItem(VIEW_STORE,JSON.stringify(viewPrefs()));localStorage.setItem('augi.syncDisplayAt.v1',String(Date.now()));}catch(_){}refreshStakeControls();render();syncSoon();}
-  try{const s=JSON.parse(localStorage.getItem(VIEW_STORE)||'{}');if(s&&['units','cash'].includes(s.stake))$('displayStake').value=s.stake;if(s&&['combined','source'].includes(s.sources))$('displaySources').value=s.sources;if(Number(s?.unit)>0)$('unitValue').value=s.unit;}catch(_){}
+  try{const s=JSON.parse(localStorage.getItem(VIEW_STORE)||'{}');if(s&&['units','cash'].includes(s.stake))$('displayStake').value=s.stake;if(s&&['combined','source'].includes(s.sources))$('displaySources').value=s.sources;if(Number(s?.unit)>0)$('unitValue').value=s.unit;if(typeof s?.lucky==='boolean')$('feelingLucky').checked=s.lucky;}catch(_){}
   for(const id of ['displayStake','displaySources','unitValue'])$(id).addEventListener('change',saveDisplay);
   $('stakeUnits').addEventListener('click',()=>{$('displayStake').value='units';saveDisplay();});
   $('stakeDollars').addEventListener('click',()=>{$('displayStake').value='cash';saveDisplay();});
@@ -1165,6 +1170,7 @@ function referenceFairMap(game,market){
   $('screenView').addEventListener('change',()=>{$('passesOnly').checked=$('screenView').value==='pass';render();});
   $('showLoggedPicks').addEventListener('change',render);
   $('sweetOnly').addEventListener('change',render);
+  $('feelingLucky').addEventListener('change',()=>{if($('feelingLucky').checked){$('screenView').value='pass';$('passesOnly').checked=true;}saveDisplay();});
   refreshStakeControls();
   // BettingPros prop responses have supplied fractional EV (0.11 for 11%).
   // Some published examples use percentage points (4.2 for 4.2%), so preserve
@@ -1186,7 +1192,8 @@ function referenceFairMap(game,market){
     const counts={pass:0,skip:0,unverified:0},reasons=new Map();eligible.forEach(r=>{const sc=screenRow(r);counts[sc.kind]++;if(sc.kind==='unverified')reasons.set(sc.why,(reasons.get(sc.why)||0)+1);});
     const parlayCount=eligible.filter(isParlayReview).length;
     const outlierCount=eligible.filter(r=>{const sc=screenRow(r);return sc.kind==='pass'&&sc.outlier;}).length;
-    $('screenSummary').textContent=counts.pass+' passing singles ('+outlierCount+' outliers) · '+counts.skip+' skipped · '+counts.unverified+' unverified · '+parlayCount+' parlay legs of '+eligible.length+' available rows'+(loggedCount?' · '+loggedCount+' already logged'+($('showLoggedPicks').checked?' shown':' hidden'):'');
+    const luckyCount=eligible.filter(r=>screenRow(r).lucky).length;
+    $('screenSummary').textContent=counts.pass+' passing singles ('+outlierCount+' outliers'+($('feelingLucky').checked?', '+luckyCount+' Feeling Lucky':'')+') · '+counts.skip+' skipped · '+counts.unverified+' unverified · '+parlayCount+' parlay legs of '+eligible.length+' available rows'+(loggedCount?' · '+loggedCount+' already logged'+($('showLoggedPicks').checked?' shown':' hidden'):'');
     if(freshRows&&counts.pass===0&&counts.unverified>0&&$('screenView').value==='pass'){$('screenView').value='unverified';$('passesOnly').checked=false;}
     const topReasons=[...reasons].sort((a,b)=>b[1]-a[1]).slice(0,2).map(([reason,count])=>count+' · '+reason);
     const bpWithoutModel=eligible.some(r=>r.feed==='bp')&&!eligible.some(r=>r.feed==='bp'&&Number.isFinite(r.modelProb));
@@ -1201,13 +1208,15 @@ function referenceFairMap(game,market){
       const sc=screenRow(r), net=sc.math?.net*100, ev=Number.isFinite(net)?'Net '+(net>=0?'+':'')+net.toFixed(2)+'%':modelEv!==null?'BP model '+(modelEv>0?'+':'')+modelEv.toFixed(2)+'%':'EV —';
       const td=document.createElement('td');td.textContent=ev+' ';
       const flag=document.createElement('span');flag.className='line-state '+sc.kind;flag.textContent=sc.kind.toUpperCase();flag.title=sc.why+(r.reference?' · '+r.reference:'');td.append(flag);
+      if(sc.math){const band=coverBand(sc.math.fair),chip=document.createElement('span');chip.className='cover-chip cover-'+band;chip.textContent=COVER_NAMES[band]+' · '+coverLabel(sc.math.fair);chip.title='Projected cover band; does not change eligibility by itself';td.append(chip);}
       const oldQuote=Date.now()-(r._cachedAt||0)>20*60*1000;if(oldQuote){const age=document.createElement('span');age.className='line-state skip';age.textContent='RECHECK PRICE';age.title='Saved calculation; price older than 20 minutes. Refresh before logging or drafting.';td.append(age);}tr.append(td);
       if(sc.kind==='pass'&&sc.outlier){const tag=document.createElement('span');tag.className='line-state skip';tag.textContent='OUTLIER · $'+Number($('ruleOutlierStake').value).toFixed(2);tag.title='Outlier single stake, separate from your regular unit';td.append(tag);}
+      if(sc.lucky){const tag=document.createElement('span');tag.className='line-state skip';tag.textContent='🍀 OPTIONAL SINGLE';tag.title='Feeling Lucky is on; this pick also remains eligible for the parlay draft';td.append(tag);}
       if(isSweetSpot(r,sc)){const tag=document.createElement('span');tag.className='sweet-badge';tag.textContent='🎯 SWEET SPOT';td.append(tag);}
       if(modelEv!==null&&Number.isFinite(net)){const sub=document.createElement('span');sub.className='sub';sub.textContent='BP model '+(modelEv>=0?'+':'')+modelEv.toFixed(2)+'% · cover '+coverLabel(sc.math?.fair);td.append(sub);}
       putCell(tr,stakeString(sc.stake));
       const act=document.createElement('td');
-      if(sc.kind==='pass'){const single=document.createElement('button');single.type='button';single.className='smallbtn';single.textContent='I placed this · Log';single.disabled=oldQuote;single.addEventListener('click',()=>openSingleEditor(r));act.append(single);}
+      if(sc.kind==='pass'){const single=document.createElement('button');single.type='button';single.className='smallbtn';single.textContent=sc.lucky?'🍀 Lucky single · Log':'I placed this · Log';single.disabled=oldQuote;single.addEventListener('click',()=>openSingleEditor(r));act.append(single);}
       if(sc.parlay){const add=document.createElement('button');add.type='button';add.className='smallbtn cover-chip cover-'+coverBand(sc.math.fair);add.textContent='+ Slip · '+COVER_NAMES[coverBand(sc.math.fair)]+' '+coverLabel(sc.math.fair);add.title='Add eligible leg to draft (no bet placed)';add.disabled=oldQuote;add.addEventListener('click',()=>addSlip(r));act.append(add);}
       const detailBtn=document.createElement('button');detailBtn.className='smallbtn';detailBtn.type='button';detailBtn.style.marginLeft='5px';detailBtn.textContent='Notes';detailBtn.setAttribute('aria-expanded','false');act.append(detailBtn);
       const noteText=lineNotes.get(rowNoteKey(r));if(noteText){const mini=document.createElement('div');mini.className='note-mini';mini.textContent='Personal note saved';act.append(mini);}
@@ -1987,7 +1996,7 @@ updateEVInputs();calculateEV();
       const meta=document.createElement('span');meta.className='sub';meta.textContent=leg.game+' · '+leg.book+' '+priceLabel(Number(leg.price))+' · '+leg.screen.toUpperCase()+(leg.stale?' · NEEDS RECHECK':'');
       label.append(line,meta);if(coverBand(leg.cover)){const chip=document.createElement('span');chip.className='cover-chip cover-'+coverBand(leg.cover);chip.textContent=COVER_NAMES[coverBand(leg.cover)]+' · '+coverLabel(leg.cover)+' cover';label.append(chip);}const del=document.createElement('button');del.className='smallbtn';del.textContent='Remove';del.addEventListener('click',()=>{slipLegs.splice(i,1);persistSlip();});item.append(label,del);host.append(item);
     }
-    host.classList.remove('cover-1','cover-2','cover-3','cover-4');if(slipLegs.length){const lowest=Math.min(...slipLegs.map(x=>Number.isFinite(x.cover)?x.cover:0));if(coverBand(lowest))host.classList.add('cover-'+coverBand(lowest));}
+    host.classList.remove('cover-1','cover-2','cover-3','cover-4','cover-5','cover-6');if(slipLegs.length){const lowest=Math.min(...slipLegs.map(x=>Number.isFinite(x.cover)?x.cover:0));if(coverBand(lowest))host.classList.add('cover-'+coverBand(lowest));}
     const stale=slipLegs.some(x=>x.stale),unknown=slipLegs.filter(x=>!coverBand(x.cover)).length;
     $('slipResults').textContent=validStake&&validMult?'All-hit return $'+(stake*mult).toFixed(2)+' · net profit '+((stake*mult)-stake>=0?'+':'−')+'$'+Math.abs(stake*mult-stake).toFixed(2)+(Number.isFinite(partial)&&partial>0?' · user-entered partial return $'+partial.toFixed(2):''):'Enter a stake and the actual multiplier or payout quote from your app. No payout is invented.';
     $('slipWarning').textContent=(stale?'⚠ One or more legs changed after a Sentinel check. Recheck the slip. ':'')+(unknown?unknown+' leg(s) have no independently confirmed positive EV. ':'')+(new Set(slipLegs.map(x=>x.game)).size<slipLegs.length?'Some legs share a game; their outcomes can be correlated. ':'')+'App payout, flex tiers, exact selection availability and same-sport rules must be verified in the app. Not an automated bet.';
@@ -2064,7 +2073,7 @@ updateEVInputs();calculateEV();
       else {g.confirmed++;g.returned+=e.payout;g.net+=e.payout-e.stake;}
     }return g;
   }
-  function coverDistribution(entries){const counts=[0,0,0,0,0];let total=0;
+  function coverDistribution(entries){const counts=[0,0,0,0,0,0,0];let total=0;
     for(const e of entries)for(const pick of Array.isArray(e.legs)?e.legs:[e]){counts[Number.isFinite(pick.cover)?coverBand(pick.cover):0]++;total++;}
     return {counts,total};
   }
@@ -2093,7 +2102,7 @@ updateEVInputs();calculateEV();
     for(const [label,value]of [['Bets placed',String(stats.count)],['Staked',money(stats.placed)],['Confirmed profit / loss',(stats.net>=0?'+':'−')+money(Math.abs(stats.net))],['Pending / return unconfirmed',String(stats.pending)]]){const card=document.createElement('div');card.textContent=label;const strong=document.createElement('strong');strong.textContent=value;if(label==='Confirmed profit / loss')strong.className=stats.net<0?'log-loss':'log-profit';card.append(strong);summary.append(card);}
     const goal=Math.max(0,Math.floor(Number($('ruleDailyGoal').value)||0));$('logGoalLabel').textContent=goal?stats.count+' / '+goal+' bets toward your daily goal'+(stats.count>=goal?' · goal reached':''):'Daily bet goal is off';$('logGoalProgress').hidden=!goal;$('logGoalProgress').max=goal||1;$('logGoalProgress').value=Math.min(stats.count,goal);
     const bands=coverDistribution(entries),breakdown=$('logBandBreakdown');breakdown.replaceChildren();
-    for(const band of [1,2,3,4,0]){const pct=bands.total?bands.counts[band]/bands.total*100:0,row=document.createElement('div');row.className='band-row cover-'+band;const label=document.createElement('span');label.textContent=band?COVER_NAMES[band]+' · '+COVER_RANGES[band]:COVER_RANGES[0];const track=document.createElement('div');track.className='band-track';const fill=document.createElement('div');fill.className='band-fill';fill.style.width=pct+'%';track.append(fill);const value=document.createElement('b');value.textContent=bands.counts[band]+' · '+pct.toFixed(1)+'%';row.append(label,track,value);breakdown.append(row);}
+    for(const band of [5,1,2,3,4,6,0]){const pct=bands.total?bands.counts[band]/bands.total*100:0,row=document.createElement('div');row.className='band-row cover-'+band;const label=document.createElement('span');label.textContent=band?COVER_NAMES[band]+' · '+COVER_RANGES[band]:COVER_RANGES[0];const track=document.createElement('div');track.className='band-track';const fill=document.createElement('div');fill.className='band-fill';fill.style.width=pct+'%';track.append(fill);const value=document.createElement('b');value.textContent=bands.counts[band]+' · '+pct.toFixed(1)+'%';row.append(label,track,value);breakdown.append(row);}
   }
   function validImportDate(day){return typeof day==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(day)&&Number.isFinite(Date.parse(day+'T12:00:00Z'))&&new Date(day+'T12:00:00Z').toISOString().slice(0,10)===day;}
   function normalizeBetImport(doc){
@@ -2555,7 +2564,7 @@ updateEVInputs();calculateEV();
       if(doc.rules?.value){store('augi.evRules.v052',doc.rules.value);store('augi.syncRulesAt.v1',String(doc.rules.at||0));
         try{const data=JSON.parse(doc.rules.value);for(const id of RULE_IDS)if(data[id]!==undefined)$(id).value=String(data[id]);}catch(_){}}
       if(doc.display?.value){store(VIEW_STORE,doc.display.value);store('augi.syncDisplayAt.v1',String(doc.display.at||0));
-        try{const v=JSON.parse(doc.display.value);if(['cash','units'].includes(v.stake))$('displayStake').value=v.stake;if(['combined','source'].includes(v.sources))$('displaySources').value=v.sources;if(Number(v.unit)>0)$('unitValue').value=v.unit;}catch(_){}}
+        try{const v=JSON.parse(doc.display.value);if(['cash','units'].includes(v.stake))$('displayStake').value=v.stake;if(['combined','source'].includes(v.sources))$('displaySources').value=v.sources;if(Number(v.unit)>0)$('unitValue').value=v.unit;if(typeof v.lucky==='boolean')$('feelingLucky').checked=v.lucky;}catch(_){}}
       for(const [key,pack] of Object.entries(doc.board||{}).slice(0,32)){
         const source=snapshotSource(key,pack);
         if(!['odds','bp','sgo','sb','papi'].includes(source)||!Array.isArray(pack?.rows)||!Number.isFinite(pack.at))continue;
