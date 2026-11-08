@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="light dark">
 <meta name="theme-color" content="#087b44">
-<title>Augi Odds Board v0.9.8 — calendar, cover ranges and Sweet Spot</title>
+<title>Augi Odds Board v0.9.9 — private bet imports</title>
 <style>
   :root { color-scheme:light; --page:#f2f8f4; --panel:#fff; --ink:#13271e; --muted:#5c7066; --rule:#d8e8dd; --accent:#087b44; --soft:#e6f5ec; --good:#087b44; --warn:#925f0c; --red:#b92d35; }
   @media (prefers-color-scheme: dark) { :root {color-scheme:dark;--page:#0c1510;--panel:#15241b;--ink:#f0f7f2;--muted:#a0b8a9;--rule:#304b39;--accent:#6ee3a4;--soft:#1d3c2b;--good:#6ee3a4;--warn:#f2bc66;--red:#ff9299;} }
@@ -182,7 +182,7 @@
 <body>
 <div class="wrap">
   <header class="head">
-    <div><div class="eyebrow">Augi · Multi-source screener · Cloudflare</div><h1>Odds Board <span class="pill">v0.9.8 · BET CALENDAR</span></h1></div>
+    <div><div class="eyebrow">Augi · Multi-source screener · Cloudflare</div><h1>Odds Board <span class="pill">v0.9.9 · BET CALENDAR</span></h1></div>
     <div class="head-right"><span class="chip">Log placed bets · no automatic betting</span><button id="syncIndicator" type="button" class="sync-indicator off" aria-label="Sync off. Open sync settings" hidden>Sync Off</button><nav id="appNav" aria-label="App navigation" hidden><button id="boardTab" class="nav-tab" type="button" aria-current="page">Board</button><button id="liveTab" class="nav-tab" type="button" aria-current="false">Live Games</button><button id="parlayTab" class="nav-tab" type="button" aria-current="false">Parlay <span id="parlayCount">0</span></button><button id="betLogTab" class="nav-tab" type="button" aria-current="false">Bet log</button><button id="settingsTab" class="nav-tab" type="button">Settings</button></nav></div>
   </header>
   <section class="panel login" id="connPanel" data-area="login" aria-labelledby="conn-label">
@@ -522,6 +522,12 @@
     <div class="bar"><h2 id="betlog-title">Bet log · Pending &amp; Results</h2><button type="button" class="primary" id="refreshBetResults">Refresh game results (ESPN · free)</button></div>
     <p class="small-note">Placed bets stay Pending until ESPN verifies a final game and exact stat. Refresh determines wins, losses and pushes. If ESPN cannot verify a market, it stays Pending with a reason. Enter the actual amount returned by your app when a winning or flex slip settles. Records are saved on this browser.</p>
     <div id="betRefreshStatus" class="status" role="status" aria-live="polite">No results checked yet.</div>
+    <details class="muted-box"><summary>Import placed bets from a file</summary>
+      <p class="small-note">Choose a private Odds Board bet-import JSON file. Review dates, amounts and apps before saving. Matching picks already logged for that game date are updated, preserving results and original cover snapshots. New tickets start Pending.</p>
+      <label for="betImportFile">Bet import file</label><input id="betImportFile" type="file" accept=".json,application/json">
+      <div id="betImportStatus" class="small-note" role="status"></div><div id="betImportPreview"></div>
+      <button id="betImportApply" type="button" class="primary" hidden>Save reviewed bets to calendar</button>
+    </details>
     <div class="actions"><button type="button" id="logPrevMonth" aria-label="Previous month">‹</button><label for="logMonth">Bet calendar</label><input id="logMonth" type="month" style="max-width:190px"><button type="button" id="logNextMonth" aria-label="Next month">›</button><button type="button" id="logToday">Today</button><label style="display:flex;gap:6px;align-items:center"><input id="logAllDates" type="checkbox" style="width:18px;min-height:18px"> Show all dates in bet lists</label></div>
     <div id="logCalendar" class="log-calendar" aria-label="Daily bets and confirmed profit or loss"></div>
     <h2 id="logSelectedDay"></h2>
@@ -999,7 +1005,7 @@ function referenceFairMap(game,market){
     const key=rowKey(r),day=gameDay(r);
     if(!day)return false;
     return placedSingles.some(x=>x.key===key&&x.day===day)
-      ||placedParlays.some(p=>p.legs.some(x=>x.key===key&&gameDay(x)===day));
+      ||placedParlays.some(p=>p.legs.some(x=>x.key===key&&(x.day||gameDay(x))===day));
   }
   function screenRow(r){
     const bad=(kind,why,extra={})=>({kind,why,stake:kind==='unverified'?null:0,parlay:false,...extra});
@@ -1069,7 +1075,7 @@ function referenceFairMap(game,market){
     for(const entry of [...entries].reverse()){
       const row=document.createElement('div');row.className='log-card';const label=document.createElement('div');label.className='slip-label';
       const title=document.createElement('strong');title.textContent=[entry.player,entry.market,entry.outcome,entry.point].filter(x=>x&&x!=='—').join(' · ');
-      const meta=document.createElement('span');meta.className='sub';meta.textContent=entry.day+' · '+entry.game+' · '+entry.book+' '+priceLabel(entry.odds)+' · $'+entry.stake.toFixed(2)+(entry.outlier?' · OUTLIER':'')+' · net EV '+(entry.netPct>=0?'+':'')+entry.netPct.toFixed(2)+'%'+(entry.offList?' · below current EV floor':'');
+      const meta=document.createElement('span');meta.className='sub';meta.textContent=placedPeriod(entry.at,'day')+' placed · '+entry.day+' game · '+entry.game+' · '+entry.book+' '+priceLabel(entry.odds)+' · $'+entry.stake.toFixed(2)+(entry.outlier?' · OUTLIER':'')+' · '+(Number.isFinite(entry.netPct)?'net EV '+(entry.netPct>=0?'+':'')+entry.netPct.toFixed(2)+'%':'original model EV unknown')+(entry.offList?' · below current EV floor':'')+(Number.isFinite(entry.quotedPayout)?' · quoted return '+money(entry.quotedPayout):'');
       label.append(title,meta,betResultBadge(entry));row.append(label);addSingleResultControls(entry,row);
       const remove=document.createElement('button');remove.type='button';remove.className='smallbtn';remove.textContent='Remove record';remove.addEventListener('click',()=>{if(!window.confirm('Remove this placed-bet record?'))return;placedSingles=placedSingles.filter(x=>x.id!==entry.id);persistSingles();});row.append(remove);host.append(row);
     }
@@ -1927,7 +1933,7 @@ updateEVInputs();calculateEV();
     if(!entries.length){const p=document.createElement('p');p.className='empty';p.textContent='No placed parlays for this date selection.';host.append(p);return;}
     for(const entry of [...entries].reverse()){
       const card=document.createElement('div');card.className='log-card';const title=document.createElement('strong');title.textContent=entry.platform+' · '+entry.type+' · '+entry.legs.length+' legs · '+money(entry.stake);card.append(title,betResultBadge(entry));
-      const meta=document.createElement('div');meta.className='sub';meta.textContent=new Date(entry.at).toLocaleString('en-US',{timeZone:'America/Chicago'})+' Central · '+(entry.ticket?'Ticket '+entry.ticket+' · ':'')+'all-hit quote '+entry.multiplier+'×'+(entry.partialQuote?' · flex partial quote '+money(entry.partialQuote):'')+(Number.isFinite(entry.payout)?' · '+(entry.payoutNote?'quoted':'actual')+' return '+money(entry.payout):'');card.append(meta);
+      const meta=document.createElement('div');meta.className='sub';meta.textContent=(entry.atPrecision==='date'?placedPeriod(entry.at,'day')+' (placement time unavailable)':new Date(entry.at).toLocaleString('en-US',{timeZone:'America/Chicago'})+' Central')+' · '+(entry.ticket?'Ticket '+entry.ticket+' · ':'')+'all-hit quote '+Number(entry.multiplier.toFixed(4))+'×'+(entry.partialQuote?' · flex partial quote '+money(entry.partialQuote):'')+(Number.isFinite(entry.payout)?' · '+(entry.payoutNote?'quoted':'actual')+' return '+money(entry.payout):'');card.append(meta);
       for(const [i,leg] of entry.legs.entries()){
         const line=document.createElement('div');line.className='log-leg';const summary=document.createElement('strong');summary.textContent=(i+1)+'. '+(leg.player&&leg.player!=='—'?leg.player+' · ':'')+leg.market+' '+leg.outcome+' '+(leg.point==='—'?'':leg.point);line.append(summary,betResultBadge(leg,false));
         const detail=document.createElement('div');detail.className='sub';detail.textContent=leg.game+' · '+(leg.sport||'League needed')+(Number.isFinite(leg.actual)?' · final stat '+leg.actual:'')+(leg.resultNote?' · '+leg.resultNote:'');line.append(detail);
@@ -1987,6 +1993,60 @@ updateEVInputs();calculateEV();
     const bands=coverDistribution(entries),breakdown=$('logBandBreakdown');breakdown.replaceChildren();
     for(const band of [1,2,3,4,0]){const pct=bands.total?bands.counts[band]/bands.total*100:0,row=document.createElement('div');row.className='band-row cover-'+band;const label=document.createElement('span');label.textContent=band?COVER_NAMES[band]+' · '+COVER_RANGES[band]:COVER_RANGES[0];const track=document.createElement('div');track.className='band-track';const fill=document.createElement('div');fill.className='band-fill';fill.style.width=pct+'%';track.append(fill);const value=document.createElement('b');value.textContent=bands.counts[band]+' · '+pct.toFixed(1)+'%';row.append(label,track,value);breakdown.append(row);}
   }
+  function validImportDate(day){return typeof day==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(day)&&Number.isFinite(Date.parse(day+'T12:00:00Z'))&&new Date(day+'T12:00:00Z').toISOString().slice(0,10)===day;}
+  function normalizeBetImport(doc){
+    if(!doc||doc.type!=='augi-bet-import'||doc.v!==1||!Array.isArray(doc.singles)||!Array.isArray(doc.parlays)||doc.singles.length+doc.parlays.length>200)throw Error('Choose an Odds Board bet-import file (up to 200 tickets).');
+    const str=(v,max=180)=>String(v??'').trim().slice(0,max);
+    const pick=p=>{if(!p||!validImportDate(p.day)||!str(p.game)||!str(p.player)||!str(p.market)||!['Over','Under'].includes(p.outcome)||p.point===null||p.point===undefined||p.point===''||!Number.isFinite(Number(p.point)))throw Error('A pick is missing its game date, matchup, player or exact line.');
+      const x={day:p.day,game:str(p.game),player:str(p.player),team:str(p.team,20),market:str(p.market),outcome:p.outcome,point:String(p.point),sport:str(p.sport,12),start:null,cover:null,result:'pending',payout:null,resultNote:'Imported from screenshot; final result not verified.'};
+      if(!TRACK_LEAGUES.includes(x.sport))throw Error('A pick needs a supported league.');x.key=rowKey(x);return x;};
+    const ticket=p=>{if(!p||!Number.isFinite(p.stake)||p.stake<=0||!validImportDate(p.placedDate)||!Number.isFinite(p.quotedPayout)||p.quotedPayout<=0)throw Error('Each ticket needs a placed date, positive cost and quoted total return.');
+      const exact=p.at&&Number.isFinite(Date.parse(p.at))&&placedPeriod(p.at,'day')===p.placedDate;
+      return {at:exact?p.at:p.placedDate+'T12:00:00-06:00',atPrecision:exact?'time':'date',stake:+p.stake.toFixed(2),quotedPayout:+p.quotedPayout.toFixed(2),result:'pending',payout:null,imported:true,importNote:str(p.note,600)};};
+    const singles=doc.singles.map((p,i)=>({...pick(p),...ticket(p),id:'import:'+str(doc.importId||'file',70)+':s'+i,book:str(p.book||'App not specified'),odds:null,netPct:null}));
+    const parlays=doc.parlays.map((p,i)=>{if(!Array.isArray(p.legs)||p.legs.length<2||p.legs.length>12)throw Error('A slip needs 2–12 exact legs.');const t=ticket(p);return {...t,id:'import:'+str(doc.importId||'file',70)+':p'+i,platform:str(p.platform||'App not specified'),type:'standard',multiplier:t.quotedPayout/t.stake,legs:p.legs.map(pick),ticket:str(p.ticket,80)};});
+    return {singles,parlays,notes:str(doc.notes,1500)};
+  }
+  function importParlayKey(p){return p.legs.map(x=>x.key+'@'+(x.day||gameDay(x))).sort().join('||');}
+  function mergeImportedBets(existing,incoming,kind){
+    const next=existing.map(e=>({...e}));let added=0,updated=0;
+    for(const entry of incoming){const index=next.findIndex(e=>e.id===entry.id||(kind==='single'?e.key===entry.key&&e.day===entry.day:importParlayKey(e)===importParlayKey(entry)));
+      if(index<0){next.push(entry);added++;continue;}
+      const old=next[index],merged={...old,...entry,id:old.id};
+      for(const k of ['result','payout','payoutNote','resultSource','settledAt','actual','resultNote','cover','stars','netPct','outlier','sweet'])if(old[k]!==undefined&&old[k]!==null)merged[k]=old[k];
+      if(kind==='parlay')merged.legs=entry.legs.map(leg=>{const prev=old.legs.find(l=>l.key===leg.key&&(l.day||gameDay(l))===leg.day);return prev?{...leg,...prev,day:leg.day}:leg;});
+      next[index]=merged;updated++;
+    }return {entries:next,added,updated};
+  }
+  let betImportRows=[];
+  $('betImportFile').addEventListener('change',async()=>{
+    $('betImportApply').hidden=true;$('betImportPreview').replaceChildren();betImportRows=[];
+    try{const file=$('betImportFile').files[0];if(!file)return;if(file.size>500000)throw Error('Import file is too large.');const doc=normalizeBetImport(JSON.parse(await file.text()));
+      $('betImportStatus').textContent=doc.singles.length+' singles + '+doc.parlays.length+' slips. '+doc.notes;
+      for(const [kind,entries]of [['single',doc.singles],['parlay',doc.parlays]])for(const entry of entries){
+        const card=document.createElement('div');card.className='log-card';const select=document.createElement('input');select.type='checkbox';select.checked=true;select.style.cssText='width:18px;min-height:18px';const label=document.createElement('label');label.style.cssText='display:flex;align-items:center;gap:8px';label.textContent=kind==='single'?[entry.player,entry.market,entry.outcome,entry.point].join(' · '):entry.legs.length+'-leg slip: '+entry.legs.map(l=>l.player+' '+l.outcome+' '+l.point).join('; ');label.prepend(select);card.append(label);
+        const fields=document.createElement('div');fields.className='grid';const input=(name,type,value)=>{const lab=document.createElement('label');lab.textContent=name;const field=document.createElement('input');field.type=type;field.value=value;if(type==='number'){field.min='.01';field.step='.01';}lab.append(field);fields.append(lab);return field;};
+        const date=input('Date placed (Central)','date',placedPeriod(entry.at,'day')),app=input('App / book (review)','text',kind==='single'?entry.book:entry.platform),stake=input('Actual cost ($)','number',entry.stake),quote=input('Quoted total return ($)','number',entry.quotedPayout);
+        const gameDates=(kind==='single'?[entry]:entry.legs).map(leg=>({leg,field:input(leg.player+' game date','date',leg.day)}));
+        const note=document.createElement('p');note.className='small-note';note.textContent=entry.importNote||'New tickets start Pending. Original model cover and EV are unknown unless an existing record has them.';card.append(fields,note);$('betImportPreview').append(card);betImportRows.push({kind,entry,select,date,app,stake,quote,gameDates});
+      }$('betImportApply').hidden=!betImportRows.length;
+    }catch(e){$('betImportStatus').textContent='Could not load import: '+e.message;}
+  });
+  $('betImportApply').addEventListener('click',()=>{
+    try{const selected=betImportRows.filter(r=>r.select.checked);if(!selected.length)throw Error('Select at least one ticket.');const singles=[],parlays=[];
+      for(const r of selected){const e=structuredClone(r.entry),stake=Number(r.stake.value),quote=Number(r.quote.value);if(!validImportDate(r.date.value)||!r.app.value.trim()||!Number.isFinite(stake)||stake<=0||!Number.isFinite(quote)||quote<=0)throw Error('Review each ticket date, app, cost and total return.');
+        if(r.date.value!==placedPeriod(e.at,'day')){e.at=r.date.value+'T12:00:00-06:00';e.atPrecision='date';}e.stake=+stake.toFixed(2);e.quotedPayout=+quote.toFixed(2);
+        for(const {leg,field}of r.gameDates){if(!validImportDate(field.value))throw Error('Review each game date.');if(r.kind==='single')e.day=field.value;else e.legs.find(l=>l.key===leg.key).day=field.value;}
+        if(r.kind==='single'){e.book=r.app.value.trim().slice(0,180);singles.push(e);}else{e.platform=r.app.value.trim().slice(0,180);e.multiplier=e.quotedPayout/e.stake;parlays.push(e);}
+      }
+      const s=mergeImportedBets(placedSingles,singles,'single'),p=mergeImportedBets(placedParlays,parlays,'parlay');
+      const beforeSingles=localStorage.getItem(SINGLE_LOG_KEY),beforeParlays=localStorage.getItem(PARLAY_LOG_KEY);
+      try{localStorage.setItem(SINGLE_LOG_KEY,JSON.stringify(s.entries));localStorage.setItem(PARLAY_LOG_KEY,JSON.stringify(p.entries));}
+      catch(e){if(beforeSingles===null)localStorage.removeItem(SINGLE_LOG_KEY);else localStorage.setItem(SINGLE_LOG_KEY,beforeSingles);if(beforeParlays===null)localStorage.removeItem(PARLAY_LOG_KEY);else localStorage.setItem(PARLAY_LOG_KEY,beforeParlays);throw Error('Could not save imported bets. Free browser storage and retry.');}
+      placedSingles=s.entries;placedParlays=p.entries;logSelectedDate=selected[0].date.value;logVisibleMonth=logSelectedDate.slice(0,7);$('logAllDates').checked=false;
+      renderBetLog();render();syncSoon();$('betImportStatus').textContent='Saved to calendar: '+(s.added+p.added)+' new tickets; '+(s.updated+p.updated)+' matching tickets updated. New tickets are Pending. '+(syncState.on?'Sync is scheduled.':'Turn on sync to copy them to your other device.');$('betImportApply').hidden=true;betImportRows=[];
+    }catch(e){$('betImportStatus').textContent='Import not saved: '+e.message;}
+  });
   function renderBetLog(){renderSingleLog();renderParlayLog();renderPerformance();renderLogCalendar();}
   function moveLogMonth(delta){const d=new Date(logVisibleMonth+'-01T12:00:00Z');d.setUTCMonth(d.getUTCMonth()+delta);logVisibleMonth=d.toISOString().slice(0,7);renderLogCalendar();}
   $('logPrevMonth').addEventListener('click',()=>moveLogMonth(-1));$('logNextMonth').addEventListener('click',()=>moveLogMonth(1));
