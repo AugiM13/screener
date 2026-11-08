@@ -259,7 +259,7 @@
           <div><strong id="oaLast">—</strong><span>Last API call cost</span></div>
           <div><strong id="oaCache">—</strong><span>Worker response</span></div>
         </div>
-        <p class="small-note" id="oaCreditNote">Load sports (free) or load odds to display the last available quota snapshot. Worker-cached responses may show an older snapshot.</p>
+        <p class="small-note" id="oaCreditNote">The latest Worker-reported quota snapshot is shared across devices. It updates after a fresh provider response.</p>
       </div>
       <div class="credit-card" aria-live="polite">
         <h3>BettingPros</h3>
@@ -676,6 +676,12 @@ function showView() {
     }else if(data.mode==='unconfigured')showLocalBudget();
     else {$('bpRemaining').textContent='Unknown';$('bpBudgetNote').textContent=data.note||'Worker request count unavailable.';updateMiniCredits();}
   }catch(e){$('bpRemaining').textContent='Unknown';$('bpBudgetNote').textContent='Could not read Worker request count.';updateMiniCredits();}}
+  async function getOddsUsage(){try{const {data}=await request('/odds/usage','object');
+    if(Number.isFinite(data.remaining))$('oaRemaining').textContent=Number(data.remaining).toLocaleString();
+    if(Number.isFinite(data.used))$('oaUsed').textContent=Number(data.used).toLocaleString();
+    if(Number.isFinite(data.last))$('oaLast').textContent=Number(data.last).toLocaleString();
+    if(data.at)$('oaCreditNote').textContent='Latest Worker provider response: '+new Date(data.at).toLocaleString()+'. Credits from other applications using the same key may not be reflected.';
+  }catch(_){/* Keep the last known response header shown on this page. */}}
 
   const numericHeader=(r,k)=>{const v=r.headers.get(k);return v!==null&&/^\d+$/.test(v.trim())?v.trim():null;};
   function updateCredits(resp,path) {
@@ -702,6 +708,7 @@ function showView() {
     if(cache)$('oaCache').textContent=cache==='hit'?'Cached':cache==='miss'?'Fetched':'Unknown';
     if(rem!==null||used!==null||last!==null){
       $('oaCreditNote').textContent=(cache==='hit'?'Cached quota snapshot':'Last reported quota snapshot')+' · '+new Date().toLocaleTimeString()+'. Last-call cost refers to the upstream call represented by this response, not necessarily a new charge from this click.';
+      if(cache==='miss')setTimeout(getOddsUsage,500);
     }
   }
   async function request(path, expected='array') {
@@ -2196,7 +2203,7 @@ updateEVInputs();calculateEV();
       goTab('board');
       const restored=restoreBoardCache();if(restored)render();
       status(restored?'Restored '+restored+' cached lines from this Worker. Sentinel can screen them, but older quotes are unverified until the source is refreshed.':'Connected. Select a source and market, then load its lines.','good');
-      syncLoad();updateMiniCredits();getBpBudget();checkTodayGames();syncNow();
+      syncLoad();updateMiniCredits();getBpBudget();getOddsUsage();checkTodayGames();syncNow();
     }catch(e){$('loginStatus').textContent='Could not connect: '+String(e.message||e);$('loginStatus').className='status bad';}
     finally{$('connectBtn').disabled=false;}
   });
