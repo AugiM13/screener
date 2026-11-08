@@ -64,6 +64,8 @@ button.themer:hover{color:var(--ink); border-color:var(--dim)}
   background:transparent; border:0; color:var(--soft); border-bottom:3px solid transparent; margin-bottom:-1px}
 .tab.on{color:var(--ink); border-bottom-color:var(--accent)}
 .tab:hover{color:var(--ink)}
+.board-link{display:inline-flex;align-items:center;font-family:inherit;font-size:15px;font-weight:600;padding:10px 0;color:var(--accent);text-decoration:none;white-space:nowrap}
+.board-link:hover{text-decoration:underline}
 .view{display:none} .view.on{display:block}
 
 .board{margin:22px 0; background:var(--panel); border:1px solid var(--rule); border-radius:10px;
@@ -803,6 +805,7 @@ button.log.sm.share-btn{background:transparent; color:var(--accent); border:1px 
   <button class="tab" data-view="v-perf">Performance</button>
   <button class="tab" data-view="v-live">Live</button>
   <button class="tab" data-view="v-settings">Settings</button>
+  <a class="board-link" href="./odds-board.html">Odds Board ↗</a>
   <button class="tab" data-view="v-paste" title="Paste a board from the BettingPros site — doesn't use the API">Paste a board</button>
 </div>
 
