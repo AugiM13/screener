@@ -404,7 +404,7 @@
     <h2 id="bp-label">BettingPros · Player props &amp; platform coverage</h2>
     <p class="hint">The screener model uses BettingPros' recommended side, cover probability and EV at the offered line. It searches available sportsbook prices through my-odds-worker. Only rows with actual model evidence can pass; each page may use one BettingPros request.</p>
     <div class="grid" style="margin-top:14px">
-      <div><label for="bpSport">BettingPros sport</label><select id="bpSport"><option value="NBA">NBA</option><option value="NFL">NFL</option><option value="NCAAF">NCAAF</option><option value="NHL">NHL</option><option value="MLB">MLB</option><option value="WNBA">WNBA</option><option value="NCAAB">NCAAB</option><option value="GOLF">Golf</option></select></div>
+      <div><label for="bpSport">BettingPros sport</label><select id="bpSport"><option value="NBA">NBA</option><option value="NFL">NFL</option><option value="NCAAF">NCAAF</option><option value="NHL">NHL</option><option value="MLB">MLB</option><option value="WNBA">WNBA</option><option value="NCAAB">NCAAB</option><option value="SOCCER">Soccer</option><option value="GOLF">Golf</option></select></div>
       <div><label for="bpMarket">Player prop markets</label><select id="bpMarket"><option value="all">All available player props</option></select></div>
       <div><label for="bpPages">Pages to scan (up to 20 props/page)</label><select id="bpPages"><option value="1">1 page</option><option value="2" selected>2 pages</option><option value="3">3 pages</option><option value="5">5 pages</option></select></div>
       <div><label for="bpApp">Filter results by platform</label><select id="bpApp"><option value="all">All returned books</option><option value="prizepicks">PrizePicks</option><option value="sleeper">Sleeper</option><option value="kalshi">Kalshi</option><option value="underdog">Underdog</option></select></div>
@@ -1544,6 +1544,7 @@ function referenceFairMap(game,market){
     NCAAF:/receptions?|receiving|rushing|passing|completions?|attempts?|touchdowns?|interceptions?|tackles?|sacks?|yards?|fantasy/i,
     NHL:/shots?|saves?|blocks?|goals?|assists?|points?|power.play|hockey|fantasy/i,
     GOLF:/top[ _-]?(5|10|20|40)|cut|round|strokes?|birdies?|bogeys?|eagles?|fairways?|greens?|finish|tournament|winner|fantasy/i,
+    SOCCER:/shots?|shots? on target|\bsot\b|goals?|assists?|goal.?contributions?|\bg\s*\+\s*a\b|saves?|tackles?|passes?|cards?|fouls?|offsides?|corners?|clean sheets?|fantasy/i,
     MLB:/strikeouts?|hits?|bases?|home.runs?|rbi|runs?|stolen|walks?|innings?|outs?|doubles?|triples?|earned|fantasy/i
   };
   function bpPropCandidate(m,sport){
