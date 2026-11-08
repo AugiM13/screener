@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="light dark">
 <meta name="theme-color" content="#087b44">
-<title>Augi Odds Board v0.9.9 — private bet imports</title>
+<title>Augi Odds Board v0.10.0 — sports coverage and scan costs</title>
 <style>
   :root { color-scheme:light; --page:#f2f8f4; --panel:#fff; --ink:#13271e; --muted:#5c7066; --rule:#d8e8dd; --accent:#087b44; --soft:#e6f5ec; --good:#087b44; --warn:#925f0c; --red:#b92d35; }
   @media (prefers-color-scheme: dark) { :root {color-scheme:dark;--page:#0c1510;--panel:#15241b;--ink:#f0f7f2;--muted:#a0b8a9;--rule:#304b39;--accent:#6ee3a4;--soft:#1d3c2b;--good:#6ee3a4;--warn:#f2bc66;--red:#ff9299;} }
@@ -182,7 +182,7 @@
 <body>
 <div class="wrap">
   <header class="head">
-    <div><div class="eyebrow">Augi · Multi-source screener · Cloudflare</div><h1>Odds Board <span class="pill">v0.9.9 · BET CALENDAR</span></h1></div>
+    <div><div class="eyebrow">Augi · Multi-source screener · Cloudflare</div><h1>Odds Board <span class="pill">v0.10.0 · SPORTS COVERAGE</span></h1></div>
     <div class="head-right"><span class="chip">Log placed bets · no automatic betting</span><button id="syncIndicator" type="button" class="sync-indicator off" aria-label="Sync off. Open sync settings" hidden>Sync Off</button><nav id="appNav" aria-label="App navigation" hidden><button id="boardTab" class="nav-tab" type="button" aria-current="page">Board</button><button id="liveTab" class="nav-tab" type="button" aria-current="false">Live Games</button><button id="parlayTab" class="nav-tab" type="button" aria-current="false">Parlay <span id="parlayCount">0</span></button><button id="betLogTab" class="nav-tab" type="button" aria-current="false">Bet log</button><button id="settingsTab" class="nav-tab" type="button">Settings</button></nav></div>
   </header>
   <section class="panel login" id="connPanel" data-area="login" aria-labelledby="conn-label">
@@ -223,7 +223,7 @@
     <div id="todayStatus" class="status" role="status" aria-live="polite" style="margin-top:12px">Today’s schedule has not been checked.</div>
   </section>
   <section class="panel" data-area="board" aria-label="API snapshot" id="boardQuickStats">
-    <div class="quick-stats"><span>API usage snapshot</span><span id="miniOdds">Odds API: — credits left</span><span id="miniBP">BettingPros: budget not checked</span><button type="button" id="openCreditSettings">Details in Settings</button><button type="button" id="refreshSports">Refresh sports / quota snapshot</button></div>
+    <div class="quick-stats"><span>API usage snapshot</span><span id="miniOdds">Odds API: — credits left</span><span id="miniBP">BettingPros: budget not checked</span><span id="miniBPLast">Last BP prop scan: —</span><button type="button" id="openCreditSettings">Details in Settings</button><button type="button" id="refreshSports">Refresh sports / quota snapshot</button></div>
   </section>
   <section class="panel" data-area="settings" aria-label="Connection settings">
     <div class="bar"><h2>Connection &amp; source diagnostics</h2><span class="chip">Secure configuration</span></div>
@@ -269,7 +269,7 @@
         <div class="credit-metrics">
           <div><strong id="bpMisses">0</strong><span>This page: upstream requests</span></div>
           <div><strong id="bpHits">0</strong><span>This page: cache hits</span></div>
-          <div><strong id="bpTotal">0</strong><span>This page: successful calls</span></div>
+          <div><strong id="bpTotal">0</strong><span>This page: successful calls</span></div><div><strong id="bpLastCost">—</strong><span>Last prop scan: upstream requests</span></div>
         </div>
         <div class="actions"><button id="refreshBPBudget" type="button">Refresh 24-hour usage</button></div>
         <p class="small-note" id="bpBudgetNote">The Worker counts uncached BettingPros requests across your devices. This is not an official provider balance.</p>
@@ -287,11 +287,11 @@
 <section class="panel" data-area="board" id="sgoPanel" hidden>
   <h2>3 · SportsGameOdds · Scan sport-wide odds</h2>
   <div class="grid">
-    <div><label for="sgoLeague">League</label><select id="sgoLeague"><option>NBA</option><option>NFL</option><option>NCAAF</option><option>NCAAB</option><option>NHL</option><option>MLB</option><option>WNBA</option><option>EPL</option><option>MLS</option><option>LALIGA</option></select></div>
+    <div><label for="sgoLeague">League</label><select id="sgoLeague"><option>NBA</option><option>NFL</option><option>NCAAF</option><option>NCAAB</option><option>NHL</option><option>MLB</option><option>WNBA</option><option>EPL</option><option>MLS</option><option>LALIGA</option><option value="ATP">Tennis · ATP</option><option value="WTA">Tennis · WTA</option><option value="PGA_MEN">Golf · PGA Men</option><option value="PGA_WOMEN">Golf · PGA Women</option><option value="LIV_TOUR">Golf · LIV Tour</option></select></div>
     <div><label for="sgoLimit">Maximum events</label><select id="sgoLimit"><option value="1">1</option><option value="3" selected>3</option><option value="5">5</option><option value="10">10</option></select></div>
     <div><label for="sgoFilter">Search book / player / market</label><input id="sgoFilter" type="search" placeholder="Filter loaded quotes"></div>
   </div>
-  <div class="actions"><button class="primary" type="button" id="loadSGO">Scan SportsGameOdds</button></div>
+  <div class="actions"><button class="primary" type="button" id="loadSGO">Scan SportsGameOdds</button><button type="button" id="sgoLeagues">Refresh available leagues</button></div><p id="sgoCoverage" class="hint">Tennis and golf depend on your plan and current events. Esports appears only when the provider returns a league for it.</p>
   <p class="hint">Up to 700 event-quote rows per response; this is a limited scan, not a complete feed. When available, +EV is computed using SportsGameOdds' estimated fair odds, only when the quoted line matches its fair line. This is not guaranteed Pinnacle no-vig EV.</p>
 </section>
 <section class="panel" data-area="board" id="sbPanel" hidden>
@@ -404,7 +404,7 @@
     <h2 id="bp-label">BettingPros · Player props &amp; platform coverage</h2>
     <p class="hint">The screener model uses BettingPros' recommended side, cover probability and EV at the offered line. It searches available sportsbook prices through my-odds-worker. Only rows with actual model evidence can pass; each page may use one BettingPros request.</p>
     <div class="grid" style="margin-top:14px">
-      <div><label for="bpSport">BettingPros sport</label><select id="bpSport"><option value="NBA">NBA</option><option value="NFL">NFL</option><option value="NCAAF">NCAAF</option><option value="NHL">NHL</option><option value="MLB">MLB</option><option value="WNBA">WNBA</option><option value="NCAAB">NCAAB</option></select></div>
+      <div><label for="bpSport">BettingPros sport</label><select id="bpSport"><option value="NBA">NBA</option><option value="NFL">NFL</option><option value="NCAAF">NCAAF</option><option value="NHL">NHL</option><option value="MLB">MLB</option><option value="WNBA">WNBA</option><option value="NCAAB">NCAAB</option><option value="GOLF">Golf</option></select></div>
       <div><label for="bpMarket">Player prop markets</label><select id="bpMarket"><option value="all">All available player props</option></select></div>
       <div><label for="bpPages">Pages to scan (up to 20 props/page)</label><select id="bpPages"><option value="1">1 page</option><option value="2" selected>2 pages</option><option value="3">3 pages</option><option value="5">5 pages</option></select></div>
       <div><label for="bpApp">Filter results by platform</label><select id="bpApp"><option value="all">All returned books</option><option value="prizepicks">PrizePicks</option><option value="sleeper">Sleeper</option><option value="kalshi">Kalshi</option><option value="underdog">Underdog</option></select></div>
@@ -423,7 +423,7 @@
     <h2 id="bp-games-label">Game lines · BettingPros</h2>
     <p class="hint">BettingPros live game markets: moneyline, spreads, totals where offered. Load the current sport's games and market catalog, choose an exact market, then scan 1–5 games. Each event-market pair may use an API request; prices only appear if returned by BettingPros.</p>
     <div class="grid" style="margin-top:14px">
-      <div><label for="bpGameSport">Sport</label><select id="bpGameSport"><option>NBA</option><option>NFL</option><option>NCAAF</option><option>NHL</option><option>MLB</option><option>WNBA</option><option>NCAAB</option><option>SOCCER</option></select></div>
+      <div><label for="bpGameSport">Sport</label><select id="bpGameSport"><option>NBA</option><option>NFL</option><option>NCAAF</option><option>NHL</option><option>MLB</option><option>WNBA</option><option>NCAAB</option><option>SOCCER</option><option value="GOLF">Golf</option></select></div>
       <div><label for="bpGameCategory">Market category</label><select id="bpGameCategory"><option value="moneyline">Moneyline</option><option value="spread">Spread</option><option value="total">Game total</option></select></div>
       <div><label for="bpGameMarket">Actual BettingPros market</label><select id="bpGameMarket"><option value="">Load games &amp; markets first</option></select></div>
       <div><label for="bpGameSelection">Matchups</label><select id="bpGameSelection"><option value="all">First games in the sport (up to limit)</option></select></div>
@@ -730,18 +730,21 @@ function showView() {
   }catch(_){/* Keep the last known response header shown on this page. */}}
 
   const numericHeader=(r,k)=>{const v=r.headers.get(k);return v!==null&&/^\d+$/.test(v.trim())?v.trim():null;};
-  function updateCredits(resp,path) {
-    if(path.startsWith('/bp/')&&path!=='/bp/budget') {
-      const state=resp.headers.get('x-bp-cache');
-      if(state==='miss') {if(resp.headers.get('x-bp-tracked')==='worker')getBpBudget();
-        else {bpLocalCalls.push(Date.now());localBudget();showLocalBudget();}}
-      if(!resp.ok)return;
-      bpSession.total++;
-      if(state==='miss')bpSession.miss++;
-      else if(state==='hit')bpSession.hit++;
-      $('bpMisses').textContent=String(bpSession.miss);
-      $('bpHits').textContent=String(bpSession.hit);
-      $('bpTotal').textContent=String(bpSession.total);
+  function updateCredits(resp,path,data=null) {
+    if((path.startsWith('/bp/')&&path!=='/bp/budget')||path.startsWith('/props?')) {
+      const state=resp.headers.get('x-bp-cache'),reported=numericHeader(resp,'x-bp-requests');
+      const estimate=reported===null&&state==='miss'&&(path.startsWith('/bp/')||Number.isFinite(data?.pages_fetched));
+      const cost=reported!==null?Number(reported):state==='hit'?0:estimate?(path.startsWith('/bp/')?1:data.pages_fetched):null;
+      if(path.startsWith('/props?')){
+        $('bpLastCost').textContent=cost===null?'Not reported':(estimate?'~':'')+cost;
+        $('miniBPLast').textContent='Last BP prop scan: '+(cost===null?'not reported':(estimate?'~':'')+cost+' request(s)'+(Number.isFinite(data?.pages_fetched)?' / '+data.pages_fetched+' page(s)':'')+(state==='hit'?' · cached':''));
+      }
+      if(cost!==null&&cost>0){bpSession.miss+=cost;
+        if(['worker','kv'].includes(resp.headers.get('x-bp-tracked')))getBpBudget();
+        else {for(let i=0;i<cost;i++)bpLocalCalls.push(Date.now());localBudget();showLocalBudget();}}
+      if(state==='hit')bpSession.hit++;
+      if(resp.ok)bpSession.total++;
+      $('bpMisses').textContent=String(bpSession.miss);$('bpHits').textContent=String(bpSession.hit);$('bpTotal').textContent=String(bpSession.total);
       return;
     }
     const rem=numericHeader(resp,'x-requests-remaining');
@@ -759,9 +762,9 @@ function showView() {
   }
   async function request(path, expected='array') {
     const resp=await fetch(baseUrl()+path,{method:'GET',headers:{'x-pass':$('pass').value},cache:'no-store'});
-    updateCredits(resp,path);
     const raw=await resp.text();let data;
     try{data=JSON.parse(raw);}catch{data=raw;}
+    updateCredits(resp,path,data);
     if(!resp.ok){
       const why=typeof data==='string'?data:(data.message||data.error||data.error_code||'API error');
       const e=new Error('HTTP '+resp.status+': '+why);e.status=resp.status;throw e;
@@ -861,7 +864,7 @@ function referenceFairMap(game,market){
   function dateLabel(s) {if(!s)return 'Date/time unavailable · not verified';const dt=new Date(s);return Number.isNaN(dt.getTime())?'Date/time not verified':dt.toLocaleString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit',timeZone:'America/Chicago',timeZoneName:'short'});}
   function putCell(tr,text,cls) {const td=document.createElement('td');if(cls)td.className=cls;td.textContent=text;tr.appendChild(td);return td;}
   function bpRatingLabel(r){const n=Number(r.stars);return r.feed==='bp'&&r.stars!=null&&Number.isFinite(n)&&n>=1&&n<=5?'★ '+(Number.isInteger(n)?n:n.toFixed(1))+'/5':null;}
-  function gameName(g) {return (g.away_team||'Away')+' @ '+(g.home_team||'Home');}
+  function gameName(g) {return g.away_team&&g.home_team?g.away_team+' @ '+g.home_team:String(g.name||g.sport_title||g.home_team||'Tournament');}
   function marketName(key) {return PROP_MARKETS[$('sport').value]?.find(([k])=>k===key)?.[1]||key.replace(/_/g,' ');}
   const photos=new Map();
   function normalName(name){return String(name||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]/g,'');}
@@ -961,7 +964,7 @@ function referenceFairMap(game,market){
     return 'Other player props';
   }
   const SINGLE_LOG_KEY='augi.placedSingles.v080';
-  const TRACK_LEAGUES=['NBA','WNBA','NHL','NFL','NCAAF','NCAAB','MLB'];
+  const TRACK_LEAGUES=['NBA','WNBA','NHL','NFL','NCAAF','NCAAB','MLB','ATP','WTA','TENNIS','GOLF','PGA_MEN','PGA_WOMEN','LIV_TOUR','ESPORTS'];
   let placedSingles=[];
   let logSelectedDate=placedPeriod(new Date().toISOString(),'day');
   let logVisibleMonth=logSelectedDate.slice(0,7);
@@ -1201,7 +1204,7 @@ function referenceFairMap(game,market){
           item.books.add(book.key||book.title||'Unknown');if(out.price>item.price){item.price=out.price;item.book=book.title||book.key||'Unknown';item.bookKey=book.key||'';}
         }
       }}
-      for(const i of unique.values())lines.push({game:gameName(game),start:game.commence_time,player:'—',market:market==='h2h'?'Moneyline':market==='spreads'?'Spread':'Game total',outcome:i.outcome,point:pointLabel(i.pt),price:i.price,book:i.book,bookKey:i.bookKey,books:i.books.size,ev:i.bookKey==='pinnacle'?null:evOf(i.price,fair.get(JSON.stringify([i.outcome,i.pt]))),reference:'Pinnacle no-vig'});
+      for(const i of unique.values())lines.push({game:gameName(game),start:game.commence_time,player:'—',sport:game.sport_key||$('sport').value,market:market==='outrights'?'Tournament winner':market==='h2h'?'Moneyline':market==='spreads'?'Spread':'Game total',outcome:i.outcome,point:pointLabel(i.pt),price:i.price,book:i.book,bookKey:i.bookKey,books:i.books.size,ev:i.bookKey==='pinnacle'?null:evOf(i.price,fair.get(JSON.stringify([i.outcome,i.pt]))),reference:'Pinnacle no-vig'});
     }
     lines.sort(sortLines);return {lines,gameCount};
   }
@@ -1226,7 +1229,21 @@ function referenceFairMap(game,market){
     return [...unique.values()].map(i=>({game:gameName(game),start:game.commence_time,player:i.player,market:marketName(i.market),outcome:i.outcome,point:propLine(i.pt),price:i.price,book:i.book,bookKey:i.bookKey,books:i.books.size}));
   }
   function sortLines(a,b){return Date.parse(a.start)-Date.parse(b.start)||a.game.localeCompare(b.game)||a.player.localeCompare(b.player)||a.outcome.localeCompare(b.outcome);}
+  function applySportCatalog(data){
+    const active=data.filter(x=>x.active&&x.key&&x.title);
+    const select=$('sport'),chosen=select.value;select.replaceChildren();
+    for(const s of active){const o=document.createElement('option');o.value=s.key;o.dataset.outright=String(Boolean(s.has_outrights));o.textContent=(s.group?s.group+' · ':'')+s.title+(s.has_outrights?' · Tournament winner':'');select.appendChild(o);}
+    if(active.some(s=>s.key===chosen))select.value=chosen;else if(active.some(s=>s.key==='basketball_nba'))select.value='basketball_nba';
+    updatePropMarkets();return active;
+  }
+  function updateOddsMarkets(){
+    const outright=$('sport').selectedOptions[0]?.dataset.outright==='true',select=$('market'),prior=select.value;select.replaceChildren();
+    for(const [key,label]of (outright?[['outrights','Tournament winner']]:[['h2h','Moneyline / match winner'],['spreads','Spread / handicap'],['totals','Game / match total']])){const o=document.createElement('option');o.value=key;o.textContent=label;select.append(o);}
+    if([...select.options].some(o=>o.value===prior))select.value=prior;
+    $('loadGames').disabled=busy||outright;
+  }
   function updatePropMarkets() {
+    updateOddsMarkets();
     const sport=$('sport').value,opts=PROP_MARKETS[sport]||[],sel=$('propMarket'),prior=sel.value;
     sel.replaceChildren();
     if(opts.length){const all=document.createElement('option');all.value='all';all.textContent='All available player-prop categories ('+opts.length+')';sel.appendChild(all);}
@@ -1254,12 +1271,9 @@ function referenceFairMap(game,market){
     try {
       const sport=$('sport').value,sportParam=encodeURIComponent(sport);
       if(kind==='sports'){
-        const {data}=await request('/odds/sports');const active=data.filter(x=>x.active&&x.key&&x.title&&!x.has_outrights);
-        const select=$('sport'),chosen=select.value;select.replaceChildren();
-        for(const s of active){const o=document.createElement('option');o.value=s.key;o.textContent=(s.group?s.group+' · ':'')+s.title;select.appendChild(o);}
-        if(active.some(s=>s.key===chosen))select.value=chosen;else if(active.some(s=>s.key==='basketball_nba'))select.value='basketball_nba';
+        const {data}=await request('/odds/sports');const active=applySportCatalog(data);
         gamesCache.clear();updateGameOptions([]);updatePropMarkets();checkTodayGames();
-        metadata([active.length+' active non-outright sports']);status('HTTP 200 · Loaded '+active.length+' sports. Choose a league and market.','good');
+        metadata([active.length+' active sports / tournaments']);status('HTTP 200 · Loaded '+active.length+' sports. Choose a league and market.','good');
       } else if(kind==='games') {
         const games=await gamesForSport(sport,true);rows=[];lastMode='games';render();
         const samples=games.slice(0,15).map(g=>gameName(g)+' · '+dateLabel(g.commence_time)).join('\n');
@@ -1414,7 +1428,7 @@ function referenceFairMap(game,market){
   const todayCache=new Map();
   let todayRequest=0;
   function selectedTodayLeague(){
-    if(view.source==='odds')return TODAY_SPORT[$('sport').value]||null;
+    if(view.source==='odds')return TODAY_SPORT[$('sport').value]||(/^tennis_/.test($('sport').value)?'TENNIS':/^golf_/.test($('sport').value)?'GOLF':null);
     if(view.source==='bp')return (view.type==='props'?$('bpSport'):$('bpGameSport')).value;
     if(view.source==='sgo')return $('sgoLeague').value;
     return null;
@@ -1529,6 +1543,7 @@ function referenceFairMap(game,market){
     NFL:/receptions?|receiving|rushing|passing|completions?|attempts?|touchdowns?|interceptions?|tackles?|sacks?|longest|yards?|kick|field.goals?|fantasy/i,
     NCAAF:/receptions?|receiving|rushing|passing|completions?|attempts?|touchdowns?|interceptions?|tackles?|sacks?|yards?|fantasy/i,
     NHL:/shots?|saves?|blocks?|goals?|assists?|points?|power.play|hockey|fantasy/i,
+    GOLF:/top[ _-]?(5|10|20|40)|cut|round|strokes?|birdies?|bogeys?|eagles?|fairways?|greens?|finish|tournament|winner|fantasy/i,
     MLB:/strikeouts?|hits?|bases?|home.runs?|rbi|runs?|stolen|walks?|innings?|outs?|doubles?|triples?|earned|fantasy/i
   };
   function bpPropCandidate(m,sport){
@@ -1736,6 +1751,18 @@ updateEVInputs();calculateEV();
   $('sport').addEventListener('change',()=>{updatePropMarkets();updateGameOptions(gamesCache.get($('sport').value)?.games||[]);checkTodayGames();});
   $('bpGameSport').addEventListener('change',()=>checkTodayGames());
   $('sgoLeague').addEventListener('change',()=>checkTodayGames());
+  $('sgoLeagues').addEventListener('click',async()=>{
+    if(busy)return;setBusy(true);$('sgoCoverage').textContent='Checking leagues available from your SportsGameOdds connection…';
+    try{const {data}=await request('/sgo/leagues','object');if(!Array.isArray(data.leagues))throw Error('Provider did not return a league catalog.');
+      const selected=$('sgoLeague').value,select=$('sgoLeague');select.replaceChildren();
+      for(const l of data.leagues){const o=document.createElement('option');o.value=l.id;o.dataset.sport=l.sport;o.textContent=(l.sport?l.sport+' · ':'')+l.name;select.append(o);}
+      if(data.leagues.some(l=>l.id===selected))select.value=selected;
+      const has=sport=>data.leagues.filter(l=>l.sport===sport).length;
+      $('sgoCoverage').textContent=data.leagues.length+' provider-listed leagues. Tennis: '+has('TENNIS')+' · Golf: '+has('GOLF')+' · Esports: '+has('ESPORTS')+'. Listed leagues may have no current quotes.';
+      checkTodayGames();
+    }catch(e){$('sgoCoverage').textContent='League catalog unavailable: '+e.message;}
+    finally{setBusy(false);}
+  });
   $('search').addEventListener('input',render);
   $('propSearch').addEventListener('input',render);
   document.querySelectorAll('[data-source]').forEach(b=>b.addEventListener('click',()=>{
@@ -1893,6 +1920,7 @@ updateEVInputs();calculateEV();
   }
   function sourceSport(r){
     const raw=String(r.sport||((r.feed||view.source)==='odds'?$('sport').value:(r.feed||view.source)==='bp'?(lastMode==='bpGames'?$('bpGameSport').value:$('bpSport').value):(r.feed||view.source)==='sgo'?$('sgoLeague').value:''));
+    if(/^tennis_/.test(raw))return 'TENNIS';if(/^golf_/.test(raw))return 'GOLF';if(/^(esports|csgo|cs2|dota|lol|valorant)_/i.test(raw))return 'ESPORTS';
     const league={basketball_nba:'NBA',basketball_wnba:'WNBA',icehockey_nhl:'NHL',americanfootball_nfl:'NFL',americanfootball_ncaaf:'NCAAF',basketball_ncaab:'NCAAB',baseball_mlb:'MLB'}[raw]||raw;
     return TRACK_LEAGUES.includes(league)?league:'';
   }
@@ -2123,7 +2151,7 @@ updateEVInputs();calculateEV();
     try{
       for(const entry of pending){
         const league=entry.sport,path=SCHEDULE_ESPN[league],day=entry.day||gameDay(entry);
-        if(!path||!/^\d{4}-\d{2}-\d{2}$/.test(day)){entry.resultNote='Choose a league or supply a game date to check ESPN.';unmatched++;continue;}
+        if(!path||!/^\d{4}-\d{2}-\d{2}$/.test(day)){entry.resultNote=TRACK_LEAGUES.includes(league)&&!path?'Automatic result verification is not configured for '+league+'; this bet stays Pending.':'Choose a league or supply a game date to check ESPN.';unmatched++;continue;}
         const key=league+':'+day;
         try{
           if(!scoreboards.has(key))scoreboards.set(key,fetch(LIVE_ESPN+path+'/scoreboard?dates='+day.replace(/-/g,'')+'&limit=300',{cache:'no-store'}).then(r=>{if(!r.ok)throw Error('ESPN '+r.status);return r.json();}));
@@ -2348,7 +2376,7 @@ updateEVInputs();calculateEV();
     $('connectBtn').disabled=true;$('loginStatus').textContent='Checking Worker credentials via /odds/sports…';$('loginStatus').className='status';
     try{
       const {data}=await request('/odds/sports','array');
-      if(!Array.isArray(data))throw Error('Expected the sports list.');
+      if(!Array.isArray(data))throw Error('Expected the sports list.');applySportCatalog(data);
       document.body.classList.add('connected');$('appNav').hidden=false;
       $('connectedHost').textContent=new URL(baseUrl()).host;
       $('loginStatus').textContent='Connected.';$('loginStatus').className='status good';
@@ -2523,3 +2551,4 @@ updateEVInputs();calculateEV();
 </script>
 </body>
 </html>
+
