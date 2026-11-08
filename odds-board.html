@@ -344,6 +344,9 @@
     <div><label for="ruleSingleMax">Single cover max (%)</label><input id="ruleSingleMax" type="number" value="70" min="0" max="100" step="1"></div>
     <div><label for="ruleNetFloor">Net EV floor (%)</label><input id="ruleNetFloor" type="number" value="1.5" step="0.5"></div>
     <div><label for="ruleGrossMax">Gross EV ceiling (%)</label><input id="ruleGrossMax" type="number" value="40" step="1"></div>
+    <div><label for="ruleOutlierEv">Outlier net EV over (%)</label><input id="ruleOutlierEv" type="number" value="15" min="0" step="1"></div>
+    <div><label for="ruleOutlierGap">Outlier model over market (points)</label><input id="ruleOutlierGap" type="number" value="8" min="0" step="1"></div>
+    <div><label for="ruleOutlierDaily">Outlier singles per day (max)</label><input id="ruleOutlierDaily" type="number" value="15" min="0" step="1"></div>
     <div><label for="ruleBankroll">Bankroll ($)</label><input id="ruleBankroll" type="number" min="0" value="500" step="25"></div>
     <div><label for="ruleKelly">Kelly fraction (0–1)</label><input id="ruleKelly" type="number" min="0" max="1" value="0.25" step="0.05"></div>
     <div><label for="ruleHaircut">Edge haircut (0–1)</label><input id="ruleHaircut" type="number" min="0" max="1" value="0.5" step="0.1"></div>
@@ -991,7 +994,9 @@ function referenceFairMap(game,market){
     const inGame=placedSingles.filter(x=>x.game===r.game&&x.day===day).reduce((sum,x)=>sum+x.stake,0);
     const inDay=placedSingles.filter(x=>x.day===day).reduce((sum,x)=>sum+x.stake,0);
     const gameRoom=Math.max(0,bank*gameCap/100-inGame),dayRoom=Math.max(0,bank*dayCap/100-inDay);
-    const outlier=math.net>.15||(math.market!=null&&math.fair-math.market>.08);
+    const outlierEv=Number($('ruleOutlierEv').value),outlierGap=Number($('ruleOutlierGap').value),outlierDaily=Number($('ruleOutlierDaily').value);
+    if(![outlierEv,outlierGap,outlierDaily].every(Number.isFinite)||outlierEv<0||outlierGap<0||outlierDaily<0||!Number.isInteger(outlierDaily))return bad('unverified','Invalid outlier settings.');
+    const outlier=math.net>outlierEv/100||(math.market!=null&&math.fair-math.market>outlierGap/100);
     const requiredStake=outlier?outlierStake:min;
     const belowMarket=math.market!=null&&((math.market/math.offered-1-math.fee)/(1+math.fee))<=0;
     let stake=Math.min(math.raw,max,gameRoom,dayRoom);
@@ -1001,6 +1006,7 @@ function referenceFairMap(game,market){
     if(duplicate||loggedPick(r))hard.push('already logged');
     if(samePlayer)hard.push('one single per player in this game');
     if(outlier&&belowMarket)hard.push('model outlier below market');
+    if(outlier&&placedSingles.filter(x=>x.day===day&&x.outlier).length>=outlierDaily)hard.push('outlier daily count reached');
     if(math.gross>Number($('ruleGrossMax').value)/100)hard.push('gross EV over ceiling');
     if(Number.isFinite(r.pairSum)&&Math.abs(r.pairSum-1)>.02)hard.push('model sides do not devig cleanly');
     if(gameRoom<requiredStake||dayRoom<requiredStake)hard.push('game/day bankroll cap reached');
@@ -1699,7 +1705,7 @@ updateEVInputs();calculateEV();
     view.type=b.dataset.kind;showView();$('source-label').scrollIntoView({block:'start',behavior:'smooth'});
   }));
   // v0.5.2: no keys or PASS are persisted. EV rules only are saved locally.
-  const RULE_IDS=['ruleMinOdds','ruleMaxOdds','ruleSingleMin','ruleSingleMax','ruleNetFloor','ruleGrossMax','ruleBankroll','ruleKelly','ruleHaircut','ruleMinStake','ruleOutlierStake','ruleMaxStake','ruleGameCap','ruleDailyCap','ruleModelWeight','ruleBoardFee','ruleKalshiFee','rulePolyFee'];
+  const RULE_IDS=['ruleMinOdds','ruleMaxOdds','ruleSingleMin','ruleSingleMax','ruleNetFloor','ruleGrossMax','ruleOutlierEv','ruleOutlierGap','ruleOutlierDaily','ruleBankroll','ruleKelly','ruleHaircut','ruleMinStake','ruleOutlierStake','ruleMaxStake','ruleGameCap','ruleDailyCap','ruleModelWeight','ruleBoardFee','ruleKalshiFee','rulePolyFee'];
   const RULE_DEFAULTS=Object.fromEntries(RULE_IDS.map(id=>[id,$(id).value]));
   try { const saved=JSON.parse(localStorage.getItem('augi.evRules.v052')||'{}');
     for(const id of RULE_IDS){if(saved[id]!==undefined)$(id).value=String(saved[id]);}
