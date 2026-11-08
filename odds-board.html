@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="light dark">
 <meta name="theme-color" content="#087b44">
-<title>Augi Odds Board v0.9.4 — phone sync and BP ratings</title>
+<title>Augi Odds Board v0.9.5 — shared usage and logged picks</title>
 <style>
   :root { color-scheme:light; --page:#f2f8f4; --panel:#fff; --ink:#13271e; --muted:#5c7066; --rule:#d8e8dd; --accent:#087b44; --soft:#e6f5ec; --good:#087b44; --warn:#925f0c; --red:#b92d35; }
   @media (prefers-color-scheme: dark) { :root {color-scheme:dark;--page:#0c1510;--panel:#15241b;--ink:#f0f7f2;--muted:#a0b8a9;--rule:#304b39;--accent:#6ee3a4;--soft:#1d3c2b;--good:#6ee3a4;--warn:#f2bc66;--red:#ff9299;} }
@@ -180,7 +180,7 @@
 <body>
 <div class="wrap">
   <header class="head">
-    <div><div class="eyebrow">Augi · Multi-source screener · Cloudflare</div><h1>Odds Board <span class="pill">v0.9.4 · PHONE SYNC</span></h1></div>
+    <div><div class="eyebrow">Augi · Multi-source screener · Cloudflare</div><h1>Odds Board <span class="pill">v0.9.5 · PHONE SYNC</span></h1></div>
     <div class="head-right"><span class="chip">Log placed bets · no automatic betting</span><nav id="appNav" aria-label="App navigation" hidden><button id="boardTab" class="nav-tab" type="button" aria-current="page">Board</button><button id="liveTab" class="nav-tab" type="button" aria-current="false">Live Games</button><button id="parlayTab" class="nav-tab" type="button" aria-current="false">Parlay <span id="parlayCount">0</span></button><button id="betLogTab" class="nav-tab" type="button" aria-current="false">Bet log</button><button id="settingsTab" class="nav-tab" type="button">Settings</button></nav></div>
   </header>
   <section class="panel login" id="connPanel" data-area="login" aria-labelledby="conn-label">
@@ -271,7 +271,7 @@
           <div><strong id="bpTotal">0</strong><span>This page: successful calls</span></div>
         </div>
         <div class="actions"><button id="refreshBPBudget" type="button">Refresh 24-hour usage</button></div>
-        <p class="small-note" id="bpBudgetNote">Without optional BP_USAGE KV, the page keeps a local 24-hour estimate (only this browser). BettingPros does not return an official remaining balance here.</p>
+        <p class="small-note" id="bpBudgetNote">The Worker counts uncached BettingPros requests across your devices. This is not an official provider balance.</p>
       </div>
     </div>
   </section>
@@ -422,6 +422,7 @@
     <div class="meta" id="meta" style="margin-top:13px"></div>
     <div class="board-tools">
       <label><input id="passesOnly" type="checkbox" checked> PASS only by default</label>
+      <label><input id="showLoggedPicks" type="checkbox"> Show picks already in Bet log</label>
       <label for="screenView">Review lines</label><select id="screenView" style="min-width:172px;width:auto"><option value="pass">Passing singles</option><option value="skip">Skipped singles</option><option value="unverified">Unverified</option><option value="parlay">Parlay legs (45–80%)</option><option value="all">All statuses</option></select>
       <label for="globalSearch">Search combined results</label><input id="globalSearch" type="search" style="width:140px;min-height:35px" placeholder="Player / book">
       <button id="showPhotos" type="button" class="smallbtn">Refresh player photos (ESPN)</button>
@@ -670,16 +671,18 @@ function showView() {
   function showLocalBudget(){const used=localBudget();$('bpRemaining').textContent='~'+Math.max(0,bpCap-used)+' / '+bpCap;
     $('bpBudgetNote').textContent='LOCAL 24-hour estimate: '+used+' upstream attempts seen in this browser; another browser, service, or Cloudflare POP is not counted. Add BP_USAGE binding for a Worker-wide estimate. Not an official provider balance.';updateMiniCredits();}
   async function getBpBudget(){try{const {data}=await request('/bp/budget','object');
-    if(data.mode==='kv-estimate'&&Number.isFinite(data.used)){$('bpRemaining').textContent='~'+data.remaining+' / '+data.limit;
+    if((data.mode==='kv-estimate'||data.mode==='worker-count')&&Number.isFinite(data.used)){$('bpRemaining').textContent='~'+data.remaining+' / '+data.limit;
       $('bpBudgetNote').textContent='Worker rolling 24h estimate: '+data.used+' / '+data.limit+' uncached requests. '+(data.nextFreeAt?'Oldest call leaves window '+new Date(data.nextFreeAt).toLocaleString()+'. ':'')+data.note;
-    }else showLocalBudget();
-  }catch(e){showLocalBudget();}}
+    }else if(data.mode==='unconfigured')showLocalBudget();
+    else {$('bpRemaining').textContent='Unknown';$('bpBudgetNote').textContent=data.note||'Worker request count unavailable.';updateMiniCredits();}
+  }catch(e){$('bpRemaining').textContent='Unknown';$('bpBudgetNote').textContent='Could not read Worker request count.';updateMiniCredits();}}
 
   const numericHeader=(r,k)=>{const v=r.headers.get(k);return v!==null&&/^\d+$/.test(v.trim())?v.trim():null;};
   function updateCredits(resp,path) {
     if(path.startsWith('/bp/')&&path!=='/bp/budget') {
       const state=resp.headers.get('x-bp-cache');
-      if(state==='miss') {bpLocalCalls.push(Date.now());localBudget();showLocalBudget();}
+      if(state==='miss') {if(resp.headers.get('x-bp-tracked')==='worker')getBpBudget();
+        else {bpLocalCalls.push(Date.now());localBudget();showLocalBudget();}}
       if(!resp.ok)return;
       bpSession.total++;
       if(state==='miss')bpSession.miss++;
@@ -949,6 +952,12 @@ function referenceFairMap(game,market){
     return {offered,fair,fee,gross,net,market,blend,blendNet,raw};
   }
   function gameDay(r){const t=Date.parse(r.start||'');if(!Number.isFinite(t))return '';const parts=new Intl.DateTimeFormat('en-US',{timeZone:'America/Chicago',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date(t));const v=k=>parts.find(x=>x.type===k)?.value;return v('year')+'-'+v('month')+'-'+v('day');}
+  function loggedPick(r){
+    const key=rowKey(r),day=gameDay(r);
+    if(!day)return false;
+    return placedSingles.some(x=>x.key===key&&x.day===day)
+      ||placedParlays.some(p=>p.legs.some(x=>x.key===key&&gameDay(x)===day));
+  }
   function screenRow(r){
     const bad=(kind,why,extra={})=>({kind,why,stake:kind==='unverified'?null:0,parlay:false,...extra});
     if(Number.isFinite(r._cachedAt)&&Date.now()-r._cachedAt>20*60*1000)return bad('unverified','Cached odds are more than 20 minutes old; refresh the source.');
@@ -974,7 +983,7 @@ function referenceFairMap(game,market){
     let stake=Math.min(math.raw,max,gameRoom,dayRoom);
     if(outlier||(math.market==null&&Number.isFinite(r.modelProb)))stake=Math.min(stake,min);
     const hard=[];
-    if(duplicate)hard.push('already logged');
+    if(duplicate||loggedPick(r))hard.push('already logged');
     if(samePlayer)hard.push('one single per player in this game');
     if(outlier&&belowMarket)hard.push('model outlier below market');
     if(math.gross>Number($('ruleGrossMax').value)/100)hard.push('gross EV over ceiling');
@@ -1065,6 +1074,7 @@ function referenceFairMap(game,market){
   $('stakeDollars').addEventListener('click',()=>{$('displayStake').value='cash';saveDisplay();});
   $('globalSearch').addEventListener('input',render);
   $('screenView').addEventListener('change',()=>{$('passesOnly').checked=$('screenView').value==='pass';render();});
+  $('showLoggedPicks').addEventListener('change',render);
   refreshStakeControls();
   // BettingPros prop responses have supplied fractional EV (0.11 for 11%).
   // Some published examples use percentage points (4.2 for 4.2%), so preserve
@@ -1078,16 +1088,18 @@ function referenceFairMap(game,market){
     const query=(combined?$('globalSearch').value:lastMode==='sgo'?$('sgoFilter').value:lastMode==='bp'?$('bpSearch').value:lastMode==='bpGames'?$('bpGameSearch').value:lastMode==='props'?$('propSearch').value:$('search').value).trim().toLowerCase().split(/\s+/).filter(Boolean);
     updateMarketPills(working);
     const selectedApp=$('bpApp').value,selectionKind=$('selectionKind').value,selectionCategory=$('selectionCategory').value;
-    const eligible=working.filter(r=>(combined||lastMode!=='bp'||selectedApp==='all'||r.app===selectedApp)&&(selectionKind==='all'||selectionGroup(r)===selectionKind)&&(selectionCategory==='all'||marketBucket(r)===selectionCategory)&&query.every(t=>(r.game+' '+r.player+' '+r.market+' '+r.outcome+' '+r.book+' '+r.feed).toLowerCase().includes(t)));
+    const matching=working.filter(r=>(combined||lastMode!=='bp'||selectedApp==='all'||r.app===selectedApp)&&(selectionKind==='all'||selectionGroup(r)===selectionKind)&&(selectionCategory==='all'||marketBucket(r)===selectionCategory)&&query.every(t=>(r.game+' '+r.player+' '+r.market+' '+r.outcome+' '+r.book+' '+r.feed).toLowerCase().includes(t)));
+    const loggedCount=matching.filter(loggedPick).length;
+    const eligible=$('showLoggedPicks').checked?matching:matching.filter(r=>!loggedPick(r));
     const counts={pass:0,skip:0,unverified:0},reasons=new Map();eligible.forEach(r=>{const sc=screenRow(r);counts[sc.kind]++;if(sc.kind==='unverified')reasons.set(sc.why,(reasons.get(sc.why)||0)+1);});
     const parlayCount=eligible.filter(isParlayReview).length;
-    $('screenSummary').textContent=counts.pass+' passing singles · '+counts.skip+' skipped · '+counts.unverified+' unverified · '+parlayCount+' parlay legs of '+eligible.length+' matching rows';
+    $('screenSummary').textContent=counts.pass+' passing singles · '+counts.skip+' skipped · '+counts.unverified+' unverified · '+parlayCount+' parlay legs of '+eligible.length+' available rows'+(loggedCount?' · '+loggedCount+' already logged'+($('showLoggedPicks').checked?' shown':' hidden'):'');
     if(freshRows&&counts.pass===0&&counts.unverified>0&&$('screenView').value==='pass'){$('screenView').value='unverified';$('passesOnly').checked=false;}
     const topReasons=[...reasons].sort((a,b)=>b[1]-a[1]).slice(0,2).map(([reason,count])=>count+' · '+reason);
     const bpWithoutModel=eligible.some(r=>r.feed==='bp')&&!eligible.some(r=>r.feed==='bp'&&Number.isFinite(r.modelProb));
     $('screenDiagnosis').textContent=counts.unverified?(counts.pass===0?'No verified singles to show. ':'')+'Unverified: '+topReasons.join(' / ')+(bpWithoutModel?' · BettingPros rows have no model probability. The updated Worker must be deployed, and the provider must supply that field; then rescan.':''):'';
     const screenView=$('screenView').value;const shown=screenView==='all'?eligible:eligible.filter(r=>screenView==='parlay'?isParlayReview(r):screenRow(r).kind===screenView);
-    if(!shown.length){const tr=document.createElement('tr');putCell(tr,eligible.length?'No '+(screenView==='pass'?'passing singles':'rows in this review category')+'. Choose Unverified, Skipped singles, or All statuses to inspect the '+eligible.length+' loaded selections.':working.length?'No rows match these filters. Adjust the market or search filters.':'No lines loaded. Scan a source on the Board first.','empty').colSpan=12;body.appendChild(tr);return;}
+    if(!shown.length){const tr=document.createElement('tr');putCell(tr,eligible.length?'No '+(screenView==='pass'?'passing singles':'rows in this review category')+'. Choose Unverified, Skipped singles, or All statuses to inspect the '+eligible.length+' available selections.':loggedCount?'All matching picks are already in Bet log. Turn on “Show picks already in Bet log” to review them.':working.length?'No rows match these filters. Adjust the market or search filters.':'No lines loaded. Scan a source on the Board first.','empty').colSpan=12;body.appendChild(tr);return;}
     const frag=document.createDocumentFragment();
     for(const r of shown){const tr=document.createElement('tr');const rScreen=screenRow(r);tr.className='result-'+rScreen.kind;tr.title=rScreen.why;const game=putCell(tr,r.game);const sub=document.createElement('span');sub.className='sub';sub.textContent=dateLabel(r.start);game.append(sub);addPlayerCell(tr,r);putCell(tr,r.market);putCell(tr,r.outcome);putCell(tr,r.point);putCell(tr,priceLabel(r.price),'price');addBookCell(tr,r.bookKey,r.book+(combined?' · '+({odds:'Odds API',bp:'BettingPros',sgo:'SportsGameOdds',sb:'Sportsbook API',papi:'OddsPapi'}[r.feed]||r.feed):''));putCell(tr,String(r.books));
       const rating=bpRatingLabel(r),ratingCell=putCell(tr,rating||'—',rating?'bp-rating':'');
@@ -1838,7 +1850,7 @@ updateEVInputs();calculateEV();
     }
     card.append(controls);
   }
-  function persistParlays(){try{localStorage.setItem(PARLAY_LOG_KEY,JSON.stringify(placedParlays));}catch(_){}renderBetLog();syncSoon();}
+  function persistParlays(){try{localStorage.setItem(PARLAY_LOG_KEY,JSON.stringify(placedParlays));}catch(_){}renderBetLog();render();syncSoon();}
   function recomputeParlay(entry){
     if(entry.resultSource==='manual'||entry.resultSource==='app return')return;
     const results=entry.legs.map(x=>x.result||'pending');
