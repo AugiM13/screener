@@ -489,6 +489,7 @@
   </section>
 <section class="panel" data-area="live" aria-labelledby="live-title">
     <div class="bar"><h2 id="live-title">Live Games · Scores &amp; Player Stats</h2><span class="chip">ESPN public scoreboard · no betting API credits</span></div>
+    <p class="hint"><button id="openGameHub" type="button" class="smallbtn">Open Game Hub · sports / scheduled / live ↗</button> Choose a sport and game there to see recent plays and search that game's props.</p>
     <p class="small-note">See today's matchups, scores, periods and clocks, then open a game for available player stats. ESPN's unofficial public data may be delayed or unavailable. Refresh is manual unless you enable auto-refresh.</p>
     <div class="live-controls" style="margin-top:15px">
       <div><label for="liveLeague">Sport / league</label><select id="liveLeague"><option value="basketball/nba">NBA</option><option value="football/nfl">NFL</option><option value="football/college-football">College football</option><option value="hockey/nhl">NHL</option><option value="baseball/mlb">MLB</option><option value="basketball/wnba">WNBA</option><option value="basketball/mens-college-basketball">NCAAB</option><option value="soccer/eng.1">Premier League</option><option value="soccer/usa.1">MLS</option><option value="soccer/esp.1">La Liga</option></select></div>
@@ -1855,9 +1856,20 @@ updateEVInputs();calculateEV();
       const info=document.createElement('span');info.textContent=game.detail||dateLabel(game.start);head.append(badge,info);
       const body=document.createElement('div');body.className='live-teams';liveTeamRow(game.away,body);liveTeamRow(game.home,body);
       const foot=document.createElement('div');foot.className='live-foot';foot.textContent='Select game to see available player statistics';
-      b.append(head,body,foot);b.addEventListener('click',()=>loadLiveDetails(game.id));grid.append(b);
+      b.append(head,body,foot);b.addEventListener('click',()=>openGameHub(game.id));grid.append(b);
     }
   }
+  const gameHubWindows=new Set();
+  function openGameHub(eventId=''){
+    const u=new URL('game-hub.html',location.href);u.searchParams.set('league',$('liveLeague').value);u.searchParams.set('date',$('liveDate').value);
+    if(eventId)u.searchParams.set('event',eventId);
+    const tab=window.open(u.href,'_blank');if(tab)gameHubWindows.add(tab);
+  }
+  $('openGameHub').addEventListener('click',()=>openGameHub());
+  window.addEventListener('message',event=>{
+    if(event.origin!==location.origin||!gameHubWindows.has(event.source)||event.data?.type!=='pp-game-auth-request'||typeof event.data.nonce!=='string'||!/^[-\w]{12,80}$/.test(event.data.nonce)||!document.body.classList.contains('connected'))return;
+    event.source?.postMessage({type:'pp-game-auth',nonce:event.data.nonce,worker:$('worker').value.trim(),pass:$('pass').value},location.origin);
+  });
   async function loadLiveGames(force=true){
     if(!document.body.classList.contains('connected'))return;
     const league=$('liveLeague').value,day=$('liveDate').value,yyyymmdd=day.replace(/-/g,'');
