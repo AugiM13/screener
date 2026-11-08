@@ -1864,9 +1864,9 @@ updateEVInputs();calculateEV();
   }
   const gameHubWindows=new Set();
   function openGameHub(eventId=''){
-    const u=new URL('game-hub.html',location.href);u.searchParams.set('league',$('liveLeague').value);u.searchParams.set('date',$('liveDate').value);
+    const u=new URL('game-hub.html',location.href);u.searchParams.set('embed','1');u.searchParams.set('league',$('liveLeague').value);u.searchParams.set('date',$('liveDate').value);
     if(eventId)u.searchParams.set('event',eventId);
-    const tab=window.open(u.href,'_blank');if(tab)gameHubWindows.add(tab);
+    gameHubFrame.src=u.href;$('legacyLive').open=false;
   }
   const gameHubFrame=$('gameHubFrame');
   gameHubWindows.add(gameHubFrame.contentWindow);
