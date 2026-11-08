@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="light dark">
 <meta name="theme-color" content="#087b44">
-<title>Augi Odds Board v0.9.5 — shared usage and logged picks</title>
+<title>Augi Odds Board v0.9.6 — unified scan choices and sync status</title>
 <style>
   :root { color-scheme:light; --page:#f2f8f4; --panel:#fff; --ink:#13271e; --muted:#5c7066; --rule:#d8e8dd; --accent:#087b44; --soft:#e6f5ec; --good:#087b44; --warn:#925f0c; --red:#b92d35; }
   @media (prefers-color-scheme: dark) { :root {color-scheme:dark;--page:#0c1510;--panel:#15241b;--ink:#f0f7f2;--muted:#a0b8a9;--rule:#304b39;--accent:#6ee3a4;--soft:#1d3c2b;--good:#6ee3a4;--warn:#f2bc66;--red:#ff9299;} }
@@ -126,6 +126,7 @@
   .line-state{padding:4px 7px;border-radius:7px;display:inline-block;font-size:11px;font-weight:800;white-space:nowrap}.line-state.pass{background:var(--soft);color:var(--good)}.line-state.skip{background:#fff2df;color:#8d5908}.line-state.unverified{background:var(--page);color:var(--muted)}
   tr.result-skip td, tr.result-unverified td{opacity:.78} tr.result-pass td{opacity:1}
   .board-tools{display:flex;align-items:center;gap:11px;flex-wrap:wrap;margin-bottom:12px}.board-tools label{display:flex;align-items:center;gap:6px;margin:0}.board-tools input[type=checkbox]{width:18px;height:18px;min-height:18px}
+  .sync-indicator{border-radius:99px!important;padding:7px 12px!important;font-size:12px!important;font-weight:800!important}.sync-indicator.on{background:#087b44!important;color:#fff!important}.sync-indicator.off{background:var(--soft)!important;color:var(--muted)!important}
   .slip-row{border:1px solid var(--rule);border-radius:9px;padding:11px;display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:9px}.slip-label{flex:1;min-width:0}.slip-row .sub{font-size:11px}.slip-amt{font-size:19px;font-weight:850;color:var(--good)}
   .cover-1{--cover-color:#b04b27;--cover-bg:#fff0e8}.cover-2{--cover-color:#896000;--cover-bg:#fff7d9}.cover-3{--cover-color:#0873a3;--cover-bg:#e5f5fc}.cover-4{--cover-color:#138345;--cover-bg:#e5f7ed}
   @media(prefers-color-scheme:dark){.cover-1{--cover-color:#ffad88;--cover-bg:#38231e}.cover-2{--cover-color:#ffd373;--cover-bg:#342b17}.cover-3{--cover-color:#80d5fa;--cover-bg:#153343}.cover-4{--cover-color:#86edaa;--cover-bg:#173626}}
@@ -180,8 +181,8 @@
 <body>
 <div class="wrap">
   <header class="head">
-    <div><div class="eyebrow">Augi · Multi-source screener · Cloudflare</div><h1>Odds Board <span class="pill">v0.9.5 · PHONE SYNC</span></h1></div>
-    <div class="head-right"><span class="chip">Log placed bets · no automatic betting</span><nav id="appNav" aria-label="App navigation" hidden><button id="boardTab" class="nav-tab" type="button" aria-current="page">Board</button><button id="liveTab" class="nav-tab" type="button" aria-current="false">Live Games</button><button id="parlayTab" class="nav-tab" type="button" aria-current="false">Parlay <span id="parlayCount">0</span></button><button id="betLogTab" class="nav-tab" type="button" aria-current="false">Bet log</button><button id="settingsTab" class="nav-tab" type="button">Settings</button></nav></div>
+    <div><div class="eyebrow">Augi · Multi-source screener · Cloudflare</div><h1>Odds Board <span class="pill">v0.9.6 · PHONE SYNC</span></h1></div>
+    <div class="head-right"><span class="chip">Log placed bets · no automatic betting</span><button id="syncIndicator" type="button" class="sync-indicator off" aria-label="Sync off. Open sync settings" hidden>Sync Off</button><nav id="appNav" aria-label="App navigation" hidden><button id="boardTab" class="nav-tab" type="button" aria-current="page">Board</button><button id="liveTab" class="nav-tab" type="button" aria-current="false">Live Games</button><button id="parlayTab" class="nav-tab" type="button" aria-current="false">Parlay <span id="parlayCount">0</span></button><button id="betLogTab" class="nav-tab" type="button" aria-current="false">Bet log</button><button id="settingsTab" class="nav-tab" type="button">Settings</button></nav></div>
   </header>
   <section class="panel login" id="connPanel" data-area="login" aria-labelledby="conn-label">
     <h2 id="conn-label">Connect to your screener</h2>
@@ -206,18 +207,17 @@
         </div>
       </div>
     </div>
-    <div class="selection-filters" aria-label="Market types and categories">
+    <div class="selection-filters" aria-label="Scan choices">
       <div><label>Market type to scan</label><div class="switcher" role="group" aria-label="Select market type to scan"><button type="button" data-kind="games" aria-pressed="true">Game lines</button><button type="button" data-kind="props" aria-pressed="false">Player props</button></div></div>
-      <div><label for="selectionCategory">Market category</label><select id="selectionCategory"><option value="all">All available markets</option></select></div>
-      <div><label for="selectionKind">Filter loaded selections</label><select id="selectionKind"><option value="all">All selections</option><option value="prop">Player props</option><option value="game">Game lines</option></select></div>
-      <div class="market-choices" id="selectionPills" aria-label="Quick market filters"></div>
+      <div id="scanLeagueSlot"></div>
+      <div id="scanMarketSlot"></div>
     </div>
     <div class="actions"><button type="button" id="checkSources">Check source connections</button><span id="sourceStatus" class="hint">No additional API keys required to use the EV calculator.</span></div>
     <div id="oddsShared" class="grid" style="margin-top:16px">
       <div><label for="sport">Sport / league</label><select id="sport"><option value="basketball_nba">NBA</option><option value="icehockey_nhl">NHL</option><option value="americanfootball_nfl">NFL</option><option value="americanfootball_ncaaf">NCAAF</option><option value="baseball_mlb">MLB</option><option value="basketball_wnba">WNBA</option></select></div>
       <div><label for="region">Book region</label><select id="region"><option value="us">US sportsbooks</option><option value="eu">Europe (may include Pinnacle)</option><option value="us_dfs">US DFS (where available)</option><option value="us_ex">US exchanges (where available)</option></select></div>
     </div>
-    <p id="sourceNote" class="small-note" aria-live="polite">The Odds API · Game lines. Changing tabs does not request data or spend API credits.</p>
+    <p id="sourceNote" class="small-note" aria-live="polite">The Odds API · Game lines. Choose the league and market above, then scan below. Changing tabs does not spend API credits.</p>
     <div class="actions"><button type="button" id="checkToday">Check today’s games (free)</button><span class="hint">Checks the selected league before a scan. A scheduled game may have no lines at this source.</span></div>
     <div id="todayStatus" class="status" role="status" aria-live="polite" style="margin-top:12px">Today’s schedule has not been checked.</div>
   </section>
@@ -232,7 +232,7 @@
   </section>
   <section class="panel" data-area="settings" aria-labelledby="sync-title">
     <div class="bar"><h2 id="sync-title">Your bets on every device</h2><span class="chip">Cloudflare sync</span></div>
-    <p class="small-note">Syncs placed singles, parlay slips, draft legs, screening rules, display choices and recent cached Board lines. Your bets stay on this device if sync is off or temporarily unavailable. The Worker PASS is still required to connect.</p>
+    <p class="small-note">Syncs placed singles, parlay slips, draft legs, screening rules, display choices and recent cached Board lines. The header shows Sync On or Sync Off. Your bets stay on this device if sync is off or temporarily unavailable. The Worker PASS is still required to connect.</p>
     <div class="actions"><label for="syncPassword">Sync password</label><input id="syncPassword" type="password" autocomplete="new-password" placeholder="Enter your Cloudflare SYNC_KEY" style="max-width:260px"><button id="syncEnable" type="button" class="primary">Turn on sync</button><button id="syncNow" type="button" disabled>Sync now</button><button id="syncDisable" type="button" disabled>Turn off here</button></div>
     <div id="syncStatus" class="status" role="status" aria-live="polite" style="margin-top:12px">Off on this device.</div>
     <p class="hint">Set <code>SYNC_KEY</code> as a secret on <code>my-odds-worker</code> in Cloudflare first. You may choose the same password used by the original screener, but set the secret on this Worker too. Never put it in GitHub or chat. Turn on sync on the computer with your bets first, then on the phone.</p>
@@ -642,8 +642,22 @@
     return s;
   }
   const view = {source:'odds',type:'games'};
+  const movableControls=['sport','market','propMarket','bpSport','bpMarket','bpGameSport','bpGameCategory','sgoLeague'].map(id=>{
+    const element=$(id).parentElement,marker=document.createComment('original '+id+' control');
+    element.parentNode.insertBefore(marker,element);return {id,element,marker};
+  });
+  function showScanControls(){
+    for(const c of movableControls)c.marker.parentNode.insertBefore(c.element,c.marker);
+    const selected=view.source==='odds'?(view.type==='props'?['sport','propMarket']:['sport','market'])
+      :view.source==='bp'?(view.type==='props'?['bpSport','bpMarket']:['bpGameSport','bpGameCategory'])
+      :view.source==='sgo'?['sgoLeague']:[];
+    for(const [slot,id] of [['scanLeagueSlot',selected[0]],['scanMarketSlot',selected[1]]]){
+      const control=movableControls.find(c=>c.id===id);if(control)$(slot).append(control.element);
+    }
+  }
 
 function showView() {
+  showScanControls();
   const odds=view.source==='odds',bp=view.source==='bp',sgo=view.source==='sgo',sb=view.source==='sb',papi=view.source==='papi',props=view.type==='props';
   $('oddsShared').hidden=!odds;
   $('oddsGamePanel').hidden=!(odds&&!props);
@@ -656,7 +670,7 @@ function showView() {
   document.querySelectorAll('[data-source]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.source===view.source)));
   document.querySelectorAll('[data-kind]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.kind===view.type)));
   const name={odds:'The Odds API',bp:'BettingPros',sgo:'SportsGameOdds',sb:'Sportsbook API',papi:'OddsPapi'}[view.source];
-  $('sourceNote').textContent=name+' · '+(props?'Player props':'Game lines')+'. Switching tabs makes no API requests. Some providers use separate fixture IDs and cannot be automatically combined yet.';
+  $('sourceNote').textContent=name+' · '+(props?'Player props':'Game lines')+'. Choose the league and market above, then scan below. Switching tabs makes no API requests.';
   rows=[];lastMode='none';render();metadata([]);$('updated').textContent='';
   status('Ready to load '+(props?'player props':'game lines')+' from '+name+'.','');
   if(document.body.classList.contains('connected'))checkTodayGames();
@@ -914,15 +928,6 @@ function referenceFairMap(game,market){
     if(/goals?/.test(m))return 'Goals';
     return 'Other player props';
   }
-  function updateMarketPills(working){
-    const kind=$('selectionKind').value,current=$('selectionCategory').value;
-    const choices=new Map();for(const r of working){if(kind!=='all'&&selectionGroup(r)!==kind)continue;const label=marketBucket(r);choices.set(label,(choices.get(label)||0)+1);}
-    const labels=[...choices.keys()].sort((a,b)=>a.localeCompare(b));const selected=labels.includes(current)?current:'all';
-    $('selectionCategory').replaceChildren();for(const c of ['all',...labels]){const o=document.createElement('option');o.value=c;o.textContent=c==='all'?'All available markets':c+' ('+choices.get(c)+')';$('selectionCategory').append(o);}$('selectionCategory').value=selected;
-    const pills=$('selectionPills');pills.replaceChildren();for(const label of ['all',...labels.slice(0,13)]){const b=document.createElement('button');b.type='button';b.dataset.category=label;b.textContent=label==='all'?'All markets':label;b.setAttribute('aria-pressed',String(selected===label));b.addEventListener('click',()=>{$('selectionCategory').value=label;render();});pills.append(b);}
-  }
-  $('selectionKind').addEventListener('change',()=>{$('selectionCategory').value='all';render();});
-  $('selectionCategory').addEventListener('change',render);
   const SINGLE_LOG_KEY='augi.placedSingles.v080';
   const TRACK_LEAGUES=['NBA','WNBA','NHL','NFL','NCAAF','NCAAB','MLB'];
   let placedSingles=[];
@@ -1093,9 +1098,8 @@ function referenceFairMap(game,market){
     const body=$('rows');body.replaceChildren();
     const combined=$('displaySources').value==='combined';const working=combined?[...sourceSnapshots.entries()].flatMap(([source,pack])=>pack.rows.map(r=>({...r,feed:source}))):rows.map(r=>({...r,feed:view.source}));
     const query=(combined?$('globalSearch').value:lastMode==='sgo'?$('sgoFilter').value:lastMode==='bp'?$('bpSearch').value:lastMode==='bpGames'?$('bpGameSearch').value:lastMode==='props'?$('propSearch').value:$('search').value).trim().toLowerCase().split(/\s+/).filter(Boolean);
-    updateMarketPills(working);
-    const selectedApp=$('bpApp').value,selectionKind=$('selectionKind').value,selectionCategory=$('selectionCategory').value;
-    const matching=working.filter(r=>(combined||lastMode!=='bp'||selectedApp==='all'||r.app===selectedApp)&&(selectionKind==='all'||selectionGroup(r)===selectionKind)&&(selectionCategory==='all'||marketBucket(r)===selectionCategory)&&query.every(t=>(r.game+' '+r.player+' '+r.market+' '+r.outcome+' '+r.book+' '+r.feed).toLowerCase().includes(t)));
+    const selectedApp=$('bpApp').value;
+    const matching=working.filter(r=>(combined||lastMode!=='bp'||selectedApp==='all'||r.app===selectedApp)&&query.every(t=>(r.game+' '+r.player+' '+r.market+' '+r.outcome+' '+r.book+' '+r.feed).toLowerCase().includes(t)));
     const loggedCount=matching.filter(loggedPick).length;
     const eligible=$('showLoggedPicks').checked?matching:matching.filter(r=>!loggedPick(r));
     const counts={pass:0,skip:0,unverified:0},reasons=new Map();eligible.forEach(r=>{const sc=screenRow(r);counts[sc.kind]++;if(sc.kind==='unverified')reasons.set(sc.why,(reasons.get(sc.why)||0)+1);});
@@ -2179,6 +2183,7 @@ updateEVInputs();calculateEV();
   }
   $('boardTab').addEventListener('click',()=>goTab('board'));
   $('settingsTab').addEventListener('click',()=>goTab('settings'));
+  $('syncIndicator').addEventListener('click',()=>goTab('settings'));
   $('liveTab').addEventListener('click',()=>goTab('live'));
   $('openCreditSettings').addEventListener('click',()=>goTab('settings'));
   $('settingsCheckSources').addEventListener('click',()=>extraAction('sources'));
@@ -2226,6 +2231,12 @@ updateEVInputs();calculateEV();
   function syncShow(message='',error=false){
     const st=$('syncStatus');st.className='status '+(error?'bad':syncState.on?'good':'');
     st.textContent=message||(!syncState.on?'Off on this device.':syncState.busy?'Syncing…':syncState.meta?.at?'Synced '+new Date(syncState.meta.at).toLocaleString()+' · '+placedSingles.length+' singles, '+placedParlays.length+' slips.':'On · waiting to sync.');
+    const indicator=$('syncIndicator');indicator.hidden=!document.body.classList.contains('connected');
+    indicator.className='sync-indicator '+(syncState.on?'on':'off');
+    indicator.textContent=syncState.on?'Sync On':'Sync Off';
+    indicator.setAttribute('aria-pressed',String(syncState.on));
+    indicator.setAttribute('aria-label','Sync '+(syncState.on?'on':'off')+'. Open sync settings');
+    indicator.title=error?st.textContent:syncState.on?(syncState.busy?'Syncing now':syncState.meta?.at?'Last synced '+new Date(syncState.meta.at).toLocaleString():'Waiting for first sync'):'Turn on in Settings';
     $('syncNow').disabled=!syncState.on||syncState.busy;$('syncDisable').disabled=!syncState.on;
     $('syncEnable').textContent=syncState.on?'Change password':'Turn on sync';
   }
