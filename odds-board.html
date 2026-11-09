@@ -135,6 +135,7 @@
   #slipList[class*="cover-"]{border:2px solid var(--cover-color);border-radius:10px;padding:9px}
   .cover-legend{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 12px}
   .log-calendar{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px;margin:14px 0}.calendar-day{min-height:76px!important;padding:8px 3px!important;font-size:12px!important;display:flex;flex-direction:column;gap:5px;align-items:center}.calendar-day[aria-pressed="true"]{outline:2px solid var(--accent);background:var(--soft)}.calendar-day small{font-size:10px}.calendar-weekday{text-align:center;font-size:11px;color:var(--muted)}.log-profit{color:var(--good)}.log-loss{color:var(--red)}.daily-summary{display:flex;gap:12px;flex-wrap:wrap;margin:14px 0}.daily-summary>div{flex:1;min-width:130px;background:var(--page);border:1px solid var(--rule);border-radius:9px;padding:12px}.daily-summary strong{display:block;font-size:20px;margin-top:6px}.goal-progress{width:100%;height:14px;accent-color:#087b44}.band-row{display:grid;grid-template-columns:minmax(140px,1fr) 2fr auto;gap:10px;align-items:center;font-size:12px;margin:10px 0}.band-row small{display:block;color:var(--muted);font-size:10px;margin-top:3px}.band-track{height:10px;background:var(--page);border-radius:8px;overflow:hidden}.band-fill{height:100%;background:var(--cover-color,var(--muted))}.sweet-badge{display:inline-block;border-radius:6px;background:var(--soft);color:var(--good);font-size:11px;font-weight:850;padding:4px 7px}
+  .study-table{width:100%;min-width:760px;border-collapse:collapse;font-size:12px}.study-table th,.study-table td{padding:9px 8px;text-align:left;border-bottom:1px solid var(--rule);vertical-align:top}.study-table th{white-space:nowrap;color:var(--muted)}.study-table small{display:block;color:var(--muted);margin-top:3px}.study-table .cover-chip{white-space:nowrap}.study-table .empty{padding:15px}
   .placed-editor{border:2px solid var(--good)}.placed-editor[hidden]{display:none}
   .result-badge{display:inline-block;border-radius:999px;padding:3px 9px;font-size:11px;font-weight:800;background:var(--page);color:var(--muted);border:1px solid var(--rule)}
   .result-badge.won{color:var(--good);border-color:var(--good)}.result-badge.lost{color:var(--red);border-color:var(--red)}.result-badge.push{color:var(--warn);border-color:var(--warn)}
@@ -194,7 +195,7 @@
 <body>
 <div class="wrap">
   <header class="head">
-    <div><div class="eyebrow">Augi · Multi-source screener · Cloudflare</div><h1>Odds Board <span class="pill">v0.10.1 · 5% COVER BANDS</span></h1></div>
+    <div><div class="eyebrow">Augi · Multi-source screener · Cloudflare</div><h1>Odds Board <span class="pill">v0.10.2 · BET RESULT STUDY</span></h1></div>
     <div class="head-right"><span class="chip">Log placed bets · no automatic betting</span><button id="syncIndicator" type="button" class="sync-indicator off" aria-label="Sync off. Open sync settings" hidden>Sync Off</button><nav id="appNav" aria-label="App navigation" hidden><button id="boardTab" class="nav-tab" type="button" aria-current="page">Board</button><button id="liveTab" class="nav-tab" type="button" aria-current="false">Live Games</button><button id="parlayTab" class="nav-tab" type="button" aria-current="false">Parlay <span id="parlayCount">0</span></button><button id="betLogTab" class="nav-tab" type="button" aria-current="false">Bet log</button><button id="settingsTab" class="nav-tab" type="button">Settings</button></nav></div>
   </header>
   <section class="panel login" id="connPanel" data-area="login" aria-labelledby="conn-label">
@@ -556,6 +557,11 @@
     <p class="small-note">The goal is a tracking target. Each placed single or slip counts once; Pending bets do not count as losses.</p>
     <h3>Cover range breakdown</h3><div id="logBandBreakdown"></div>
     <p class="small-note">Counts selections: singles plus individual parlay legs. Percentages use all logged selections for the selected day. The 50–&lt;55% band also shows which side of the 52.5% regular-single cutoff each pick was on. With Feeling Lucky on, qualified 45–&lt;52.5% picks can be logged as optional singles. Older records without a cover snapshot appear as Unknown. These ranges do not describe the full slip's chance of winning.</p>
+    <h3>Bet result study · 5% cover bands</h3>
+    <div class="actions"><label for="studyType">Selections</label><select id="studyType" style="max-width:190px"><option value="single">Singles</option><option value="leg">Parlay legs</option></select><label for="studyScope">Placed dates</label><select id="studyScope" style="max-width:190px"><option value="all">All dates</option><option value="day">Selected day</option><option value="week">Selected week</option><option value="month">Selected month</option></select></div>
+    <p id="studySummary" class="small-note" aria-live="polite">Waiting for logged bets.</p>
+    <div class="overflow"><table class="study-table"><thead><tr><th>Projected cover</th><th>Logged</th><th>Pending result</th><th>W–L–P</th><th>Avg prediction*</th><th>Hit rate*</th><th>Difference*</th><th>Confirmed net $</th></tr></thead><tbody id="studyRows"><tr><td colspan="8" class="empty">No logged bets yet.</td></tr></tbody></table></div>
+    <p class="small-note">*Prediction average, hit rate and difference use only graded wins and losses; pushes and Pending results are excluded. Difference is hit rate minus average projected cover in percentage points. Small samples can swing sharply. Single net uses only actual confirmed returns; parlay profit is not assigned to individual legs. Historical imports without an original cover snapshot remain Unknown. These results are for reviewing the 52.5% threshold, not automatic changes to the calculator.</p>
     <div class="actions"><label for="logPeriod">Track by</label><select id="logPeriod" style="max-width:180px"><option value="day">Daily</option><option value="week">Weekly</option><option value="month">Monthly</option></select><span class="hint">Grouped by the date placed (Central time). Profit uses confirmed returns only.</span></div>
     <div class="overflow" style="margin:13px 0 20px"><table class="performance-table"><thead><tr><th>Placed period</th><th>Bets</th><th>Pending</th><th>W–L–P</th><th>Placed $</th><th>Confirmed return $</th><th>Net $</th></tr></thead><tbody id="logPerformance"><tr><td colspan="7" class="empty">No bets logged yet.</td></tr></tbody></table></div>
     <h2>Placed parlays / pick’em slips</h2>
@@ -2199,13 +2205,45 @@ updateEVInputs();calculateEV();
       renderBetLog();render();syncSoon();$('betImportStatus').textContent='Saved to calendar: '+(s.added+p.added)+' new tickets; '+(s.updated+p.updated)+' matching tickets updated. New tickets are Pending. '+(syncState.on?'Sync is scheduled.':'Turn on sync to copy them to your other device.');$('betImportApply').hidden=true;betImportRows=[];
     }catch(e){$('betImportStatus').textContent='Import not saved: '+e.message;}
   });
-  function renderBetLog(){renderSingleLog();renderParlayLog();renderPerformance();renderLogCalendar();}
-  function moveLogMonth(delta){const d=new Date(logVisibleMonth+'-01T12:00:00Z');d.setUTCMonth(d.getUTCMonth()+delta);logVisibleMonth=d.toISOString().slice(0,7);renderLogCalendar();}
+  function renderCoverStudy(){
+    const isLeg=$('studyType').value==='leg',scope=$('studyScope').value,entries=[];
+    if(isLeg){for(const slip of placedParlays)for(const leg of slip.legs||[])entries.push({pick:leg,at:slip.at});}
+    else for(const single of placedSingles)entries.push({pick:single,at:single.at});
+    const selectedPeriod=scope==='all'?'':scope==='month'?logVisibleMonth:placedPeriod(logSelectedDate+'T12:00:00-06:00',scope);
+    const selected=scope==='all'?entries:entries.filter(e=>placedPeriod(e.at||new Date().toISOString(),scope)===selectedPeriod);
+    const groups=Array.from({length:COVER_NAMES.length},()=>({logged:0,pending:0,won:0,lost:0,push:0,prediction:0,graded:0,net:0,returns:0,cutoffLucky:0,cutoffRegular:0}));
+    for(const {pick} of selected){
+      const band=coverBand(pick.cover),g=groups[band],state=['won','lost','push'].includes(pick.result)?pick.result:'pending';
+      g.logged++;g[state]++;
+      if(band===3)g[pick.cover<.525?'cutoffLucky':'cutoffRegular']++;
+      if((state==='won'||state==='lost')&&band&&Number.isFinite(pick.cover)){g.graded++;g.prediction+=pick.cover;}
+      if(!isLeg&&state!=='pending'&&Number.isFinite(pick.payout)&&Number.isFinite(pick.stake)&&!pick.payoutNote){g.net+=pick.payout-pick.stake;g.returns++;}
+    }
+    const body=$('studyRows');body.replaceChildren();
+    for(const band of [1,2,3,4,5,6,7,8,9,0]){
+      const g=groups[band],tr=document.createElement('tr'),label=document.createElement('td');
+      if(band){const chip=document.createElement('span');chip.className='cover-chip cover-'+band;chip.textContent=COVER_NAMES[band]+' · '+COVER_RANGES[band];label.append(chip);}
+      else label.textContent=COVER_RANGES[0];
+      if(band===3&&g.logged){const split=document.createElement('small');split.textContent='Below 52.5%: '+g.cutoffLucky+' · 52.5%+: '+g.cutoffRegular;label.append(split);}
+      tr.append(label);
+      const decided=g.won+g.lost,average=g.graded?g.prediction/g.graded:null,hit=decided?g.won/decided:null;
+      for(const value of [g.logged,g.pending,g.won+'–'+g.lost+'–'+g.push,average===null?'—':(average*100).toFixed(1)+'%',hit===null?'—':(hit*100).toFixed(1)+'%',average===null||hit===null?'—':(hit>=average?'+':'−')+(Math.abs(hit-average)*100).toFixed(1)+' pts',isLeg?'—':g.returns?(g.net>=0?'+':'−')+money(Math.abs(g.net))+' ('+g.returns+' confirmed)':'—'])putCell(tr,String(value));
+      body.append(tr);
+    }
+    const graded=selected.reduce((sum,{pick})=>sum+(['won','lost'].includes(pick.result)?1:0),0);
+    const known=selected.filter(({pick})=>coverBand(pick.cover)>0).length;
+    const periodLabel=scope==='all'?'all placed dates':scope==='week'?'week of '+selectedPeriod:scope==='month'?'month '+selectedPeriod:selectedPeriod;
+    $('studySummary').textContent=(isLeg?'Parlay legs':'Singles')+' · '+periodLabel+' · '+selected.length+' logged · '+graded+' win/loss results · '+known+' with saved cover predictions. '+(graded<30?'Early sample: keep the 52.5% single threshold while collecting more settled results.':'Compare observed rates with predicted cover before changing rules.');
+  }
+  function renderBetLog(){renderSingleLog();renderParlayLog();renderPerformance();renderLogCalendar();renderCoverStudy();}
+  function moveLogMonth(delta){const d=new Date(logVisibleMonth+'-01T12:00:00Z');d.setUTCMonth(d.getUTCMonth()+delta);logVisibleMonth=d.toISOString().slice(0,7);renderLogCalendar();if($('studyScope').value==='month')renderCoverStudy();}
   $('logPrevMonth').addEventListener('click',()=>moveLogMonth(-1));$('logNextMonth').addEventListener('click',()=>moveLogMonth(1));
-  $('logMonth').addEventListener('change',()=>{if(/^\d{4}-\d{2}$/.test($('logMonth').value)){logVisibleMonth=$('logMonth').value;renderLogCalendar();}});
+  $('logMonth').addEventListener('change',()=>{if(/^\d{4}-\d{2}$/.test($('logMonth').value)){logVisibleMonth=$('logMonth').value;renderLogCalendar();if($('studyScope').value==='month')renderCoverStudy();}});
   $('logToday').addEventListener('click',()=>{logSelectedDate=placedPeriod(new Date().toISOString(),'day');logVisibleMonth=logSelectedDate.slice(0,7);$('logAllDates').checked=false;renderBetLog();});
   $('logAllDates').addEventListener('change',()=>{renderSingleLog();renderParlayLog();});
   $('logPeriod').addEventListener('change',renderPerformance);
+  $('studyType').addEventListener('change',renderCoverStudy);
+  $('studyScope').addEventListener('change',renderCoverStudy);
   function statNumber(value,allowPair=false){const text=String(value??'').trim(),match=text.match(allowPair?/^(\d+)(?:-\d+)?$/:/^-?\d+(?:\.\d+)?$/);return match?Number(allowPair?match[1]:text):null;}
   function playerStat(summary,entry){
     const sport=entry.sport,market=String(entry.market||'').toLowerCase().replace(/[_-]/g,' '),groups=summary?.boxscore?.players;
