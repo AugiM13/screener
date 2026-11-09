@@ -401,7 +401,7 @@
       <button type="button" id="loadGames">Load upcoming games</button>
       <button type="button" class="primary" id="loadOdds">Load market odds (uses credits)</button>
     </div>
-    <p class="hint">Game-odds requests may spend API credits. No automatic refresh. The Worker may reuse cached data for up to 10 minutes. Spread and total prices are compared only when the points match exactly.</p>
+    <p class="hint">Game-odds requests may spend API credits. No automatic refresh. The Worker may reuse cached data for up to 10 minutes. EV needs a complete Pinnacle market or three other complete book markets at the exact line. Rows without BettingPros stars can appear as parlay legs or in All statuses, but cannot pass the singles rule.</p>
   </section>
   <section class="panel" data-area="board" id="oddsPropsPanel" aria-labelledby="props-label" hidden>
     <h2 id="props-label">Player props · The Odds API</h2>
@@ -898,8 +898,8 @@ function calculateEV(){
 function updateEVInputs(){const mode=$('evMode').value;$('evProbWrap').hidden=mode!=='prob';$('evRef1Wrap').hidden=mode==='prob';$('evRef2Wrap').hidden=mode==='prob';$('evRef3Wrap').hidden=mode!=='three';}
 // For game market prices, use only a complete Pinnacle two/three-way market.
 // Never infer win probability from a single selection; do not pair mismatched line points.
-function referenceFairMap(game,market){
-  const ref=game.bookmakers?.find(b=>String(b.key||'').toLowerCase()==='pinnacle');
+function referenceFairMap(game,market,bookKey='pinnacle'){
+  const ref=game.bookmakers?.find(b=>String(b.key||'').toLowerCase()===bookKey);
   const offers=ref?.markets?.find(m=>m.key===market)?.outcomes;
   if(!Array.isArray(offers))return new Map();
   const groups=new Map();
@@ -919,6 +919,7 @@ function referenceFairMap(game,market){
     if(new Set(group.map(o=>o.name)).size!==group.length)continue;
     const chances=group.map(o=>implied(o.price));if(chances.some(x=>x===null))continue;
     const total=chances.reduce((a,b)=>a+b,0);
+    if(total<1||total>1.25)continue;
     for(let i=0;i<group.length;i++){const o=group[i];fair.set(JSON.stringify([o.name,Number.isFinite(o.point)?o.point:null]),chances[i]/total);}
   }
   return fair;
@@ -1267,7 +1268,7 @@ function referenceFairMap(game,market){
     const luckyCount=eligible.filter(r=>screenRow(r).lucky).length;
     const staleCount=eligible.filter(r=>Date.now()-(r._cachedAt||0)>QUOTE_MAX_AGE).length;
     $('screenSummary').textContent=counts.pass+' passing singles ('+outlierCount+' outliers'+($('feelingLucky').checked?', '+luckyCount+' Feeling Lucky':'')+') · '+counts.skip+' skipped · '+counts.unverified+' unverified · '+parlayCount+' parlay legs of '+eligible.length+' available rows'+(staleCount?' · ⚠ '+staleCount+' quote(s) over 20m old: run Sentinel recheck':'')+(loggedCount?' · '+loggedCount+' already logged'+($('showLoggedPicks').checked?' shown':' hidden'):'');
-    if(freshRows&&counts.pass===0&&counts.unverified>0&&$('screenView').value==='pass'){$('screenView').value='unverified';$('passesOnly').checked=false;}
+    if(freshRows&&counts.pass===0&&$('screenView').value==='pass'){$('screenView').value=parlayCount?'parlay':'all';$('passesOnly').checked=false;}
     const topReasons=[...reasons].sort((a,b)=>b[1]-a[1]).slice(0,2).map(([reason,count])=>count+' · '+reason);
     const bpWithoutModel=eligible.some(r=>r.feed==='bp')&&!eligible.some(r=>r.feed==='bp'&&Number.isFinite(r.modelProb));
     $('screenDiagnosis').textContent=counts.unverified?(counts.pass===0?'No verified singles to show. ':'')+'Unverified: '+topReasons.join(' / ')+(bpWithoutModel?' · BettingPros rows have no model probability. The updated Worker must be deployed, and the provider must supply that field; then rescan.':''):'';
@@ -1315,7 +1316,15 @@ function referenceFairMap(game,market){
           item.books.add(book.key||book.title||'Unknown');if(out.price>item.price){item.price=out.price;item.book=book.title||book.key||'Unknown';item.bookKey=book.key||'';}
         }
       }}
-      for(const i of unique.values()){const referenceProb=i.bookKey==='pinnacle'?null:fair.get(JSON.stringify([i.outcome,i.pt]));lines.push({game:gameName(game),start:game.commence_time,player:'—',sport:game.sport_key||$('sport').value,market:market==='outrights'?'Tournament winner':market==='h2h'?'Moneyline':market==='spreads'?'Spread':'Game total',outcome:i.outcome,point:pointLabel(i.pt),price:i.price,book:i.book,bookKey:i.bookKey,books:i.books.size,referenceProb:Number.isFinite(referenceProb)?referenceProb:null,ev:null,reference:Number.isFinite(referenceProb)?'Pinnacle complete-market no-vig':'No exact Pinnacle reference'});}
+      for(const i of unique.values()){
+        const selection=JSON.stringify([i.outcome,i.pt]);
+        let referenceProb=i.bookKey==='pinnacle'?null:fair.get(selection),reference='Pinnacle complete-market no-vig';
+        if(!Number.isFinite(referenceProb)){
+          const probs=game.bookmakers.filter(b=>String(b.key||'').toLowerCase()!==String(i.bookKey||'').toLowerCase()).map(b=>referenceFairMap(game,market,String(b.key||'').toLowerCase()).get(selection)).filter(Number.isFinite).sort((a,b)=>a-b);
+          if(probs.length>=3){referenceProb=probs[Math.floor(probs.length/2)];reference='Three-book exact-market no-vig consensus';}
+        }
+        lines.push({game:gameName(game),start:game.commence_time,player:'—',sport:game.sport_key||$('sport').value,market:market==='outrights'?'Tournament winner':market==='h2h'?'Moneyline':market==='spreads'?'Spread':'Game total',outcome:i.outcome,point:pointLabel(i.pt),price:i.price,book:i.book,bookKey:i.bookKey,books:i.books.size,referenceProb:Number.isFinite(referenceProb)?referenceProb:null,ev:null,reference:Number.isFinite(referenceProb)?reference:'No complete independent market reference'});
+      }
     }
     lines.sort(sortLines);return {lines,gameCount};
   }
@@ -1323,17 +1332,17 @@ function referenceFairMap(game,market){
     if(!game||!Array.isArray(game.bookmakers))return [];
     const unique=new Map();
     const selected=new Set(String(market).split(','));
-    // A fair prop chance needs both sides at the same Pinnacle player, stat and line.
-    // One-sided, alternate, DFS and mismatched thresholds cannot be de-vigged.
-    const pinnacle=new Map();
-    for(const book of game.bookmakers){if(String(book.key||'').toLowerCase()!=='pinnacle')continue;
+    // Require complete opposing quotes for the same player, stat and threshold.
+    const referenceBooks=new Map();
+    for(const book of game.bookmakers){const bookKey=String(book.key||'').toLowerCase();if(!bookKey||/prizepicks|underdog|pick6|sleeper|dfs/.test(bookKey))continue;
       for(const m of(book.markets||[])){if(!selected.has(m.key))continue;
         for(const out of(m.outcomes||[])){
           const side=String(out.name||'').toLowerCase();
           if(!['over','under'].includes(side)||!Number.isFinite(out.point)||!implied(out.price)||!String(out.description||'').trim())continue;
           const key=JSON.stringify([m.key,normalName(out.description),out.point]);
-          if(!pinnacle.has(key))pinnacle.set(key,{});
-          const pair=pinnacle.get(key);if(pair[side]!==undefined)pair.ambiguous=true;
+          if(!referenceBooks.has(key))referenceBooks.set(key,new Map());
+          const byBook=referenceBooks.get(key);if(!byBook.has(bookKey))byBook.set(bookKey,{});
+          const pair=byBook.get(bookKey);if(pair[side]!==undefined)pair.ambiguous=true;
           pair[side]=implied(out.price);
         }
       }
@@ -1353,10 +1362,16 @@ function referenceFairMap(game,market){
       }
     }}
     return [...unique.values()].map(i=>{
-      const pair=pinnacle.get(JSON.stringify([i.market,normalName(i.player),i.pt]));
-      const side=String(i.outcome).toLowerCase(),total=(pair?.over||0)+(pair?.under||0);
-      const referenceProb=i.bookKey!=='pinnacle'&&!pair?.ambiguous&&['over','under'].includes(side)&&total>=1&&total<=1.25?pair[side]/total:null;
-      return {game:gameName(game),start:game.commence_time,player:i.player,sport:game.sport_key||$('sport').value,market:marketName(i.market),outcome:i.outcome,point:propLine(i.pt),price:i.price,book:i.book,bookKey:i.bookKey,books:i.books.size,referenceProb,reference:Number.isFinite(referenceProb)?'Pinnacle exact prop pair no-vig':'No exact Pinnacle prop pair'};
+      const byBook=referenceBooks.get(JSON.stringify([i.market,normalName(i.player),i.pt]));
+      const side=String(i.outcome).toLowerCase(),offeredBook=String(i.bookKey||'').toLowerCase();
+      const fairFor=pair=>{const total=(pair?.over||0)+(pair?.under||0);return !pair?.ambiguous&&['over','under'].includes(side)&&total>=1&&total<=1.25&&Number.isFinite(pair?.[side])?pair[side]/total:null;};
+      let referenceProb=offeredBook==='pinnacle'?null:fairFor(byBook?.get('pinnacle'));
+      let reference='Pinnacle exact prop pair no-vig';
+      if(!Number.isFinite(referenceProb)){
+        const probs=[...(byBook||new Map())].filter(([key])=>key!==offeredBook).map(([,pair])=>fairFor(pair)).filter(Number.isFinite).sort((a,b)=>a-b);
+        if(probs.length>=3){referenceProb=probs[Math.floor(probs.length/2)];reference='Three-book exact-prop no-vig consensus';}
+      }
+      return {game:gameName(game),start:game.commence_time,player:i.player,sport:game.sport_key||$('sport').value,market:marketName(i.market),outcome:i.outcome,point:propLine(i.pt),price:i.price,book:i.book,bookKey:i.bookKey,books:i.books.size,referenceProb,reference:Number.isFinite(referenceProb)?reference:'No complete independent prop reference'};
     });
   }
   function sortLines(a,b){return Date.parse(a.start)-Date.parse(b.start)||a.game.localeCompare(b.game)||a.player.localeCompare(b.player)||a.outcome.localeCompare(b.outcome);}
@@ -1414,7 +1429,7 @@ function referenceFairMap(game,market){
         const path='/odds?sport='+sportParam+'&regions='+encodeURIComponent($('region').value)+'&markets='+encodeURIComponent($('market').value);
         const {data,remaining}=await request(path);const parsed=parseGameOdds(data,$('market').value);rows=parsed.lines;lastMode='odds';render();
         metadata([parsed.gameCount+' games',rows.length+' distinct outcomes',remaining!==null?'Last reported credits remaining: '+remaining:'']);
-        status('HTTP 200 · Game odds loaded. Prices are compared for exactly matching outcomes and points.','good');$('updated').textContent='Loaded '+new Date().toLocaleTimeString();
+        status('Loaded '+rows.length+' game lines; '+rows.filter(r=>Number.isFinite(r.referenceProb)).length+' have an independent fair-price reference. '+($('screenView').value==='pass'?'Passing singles requires BettingPros stars.':'Review Parlay legs or All statuses for the rest.'),'good');$('updated').textContent='Loaded '+new Date().toLocaleTimeString();
       } else if(kind==='props') {
         if(!(PROP_MARKETS[sport]||[]).length)throw Error('Player props are not configured for this league.');
         status('Getting game list (free endpoint)…');
@@ -1445,7 +1460,7 @@ function referenceFairMap(game,market){
         metadata([completed+' games checked',failed?failed+' failed requests':'',rows.length+' distinct player lines',lastRemaining!==null?'Last reported credits remaining: '+lastRemaining:'']);
         if(errors.length)status('Player props: '+rows.length+' lines from '+completed+' games. Some requests failed:\n'+errors.slice(0,3).join('\n'),'warn');
         else if(!rows.length)status('Scan completed but no '+(market==='all'?'player':marketName(market))+' props were returned. Try another game, region, or category. Missing props do not mean the game has no player markets anywhere.','warn');
-        else status('HTTP 200 · '+rows.length+' distinct player selections loaded from '+completed+' games. Best price compares the same player, side, and point only.','good');
+        else status('Loaded '+rows.length+' player selections from '+completed+' games; '+rows.filter(r=>Number.isFinite(r.referenceProb)).length+' have a complete independent fair-price reference. '+(rows.some(r=>Number.isFinite(r.referenceProb))?'Review Parlay legs or All statuses; singles still require BettingPros stars.':'No EV reference was available at those exact player lines.'),'good');
         $('updated').textContent='Loaded '+new Date().toLocaleTimeString();
       }
     } catch(error) {status(String(error.message||error),'bad');}
@@ -1772,7 +1787,7 @@ async function extraAction(kind){
       if(!window.confirm('Fetch Sportsbook API advantages? This may count toward your plan usage.')){status('Request cancelled.','warn');return;}
       const {data}=await request('/sb/advantages','object');
       $('sbPreview').textContent=(data.note||'')+'\n'+(data.preview||'No records returned');
-      status('Sportsbook API preview loaded. Review provider fields before converting to EV rows.','good');
+      status('Sportsbook API returned a diagnostic preview below. This source does not produce Board rows yet; its response fields need verification before calculating EV.','warn');
     }else if(kind==='papi'){
       const fixture=$('papiFixture').value.trim(),book=$('papiBook').value;
       if(!/^id[0-9]{8,25}$/.test(fixture))throw Error('Enter an OddsPapi fixture ID beginning with id followed by digits.');
