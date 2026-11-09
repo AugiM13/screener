@@ -562,6 +562,24 @@
       </div>
       <div class="actions"><button id="saveManualSingle" type="button" class="primary">Save placed single as Pending</button><span id="manualSingleStatus" class="hint" role="status"></span></div>
     </details>
+    <details class="muted-box"><summary>Import a bet screenshot (Novig / PrizePicks)</summary>
+      <p class="small-note">Choose a screenshot from your phone. Text is read in this browser; inspect every field before saving. Cropped screenshots may lack the game date or full market. No bet is placed and no image is saved or synced.</p>
+      <label for="betPhoto">Bet screenshot</label><input id="betPhoto" type="file" accept="image/*" multiple>
+      <div id="photoStatus" class="small-note" role="status" aria-live="polite">Novig and PrizePicks tickets supported first. Select one or more screenshots of the same ticket.</div>
+      <label for="photoText">Text found (you can correct it)</label><textarea id="photoText" rows="8" style="width:100%" placeholder="Screenshot text will appear here"></textarea>
+      <div class="actions"><button id="photoReadText" type="button">Read screenshot</button><button id="photoParse" type="button">Fill ticket from text</button></div>
+      <div id="photoTicket" hidden>
+        <div class="grid">
+          <div><label for="photoApp">App</label><select id="photoApp"><option value="">Choose app</option><option>Novig</option><option>PrizePicks</option><option>DraftKings</option><option>Kalshi</option><option>Other</option></select></div>
+          <div><label for="photoPlaced">Date placed (Central)</label><input id="photoPlaced" type="date"></div>
+          <div><label for="photoStake">Actual cost ($)</label><input id="photoStake" type="number" min=".01" step=".01"></div>
+          <div><label for="photoReturn">Quoted total return ($)</label><input id="photoReturn" type="number" min=".01" step=".01"></div>
+        </div>
+        <p class="small-note">“To win” can mean profit rather than total return. Check the app's ticket before filling quoted total return. A 14+ pick becomes Over 13.5 only when that is the exact selection.</p>
+        <div id="photoLegs"></div>
+        <div class="actions"><button id="photoAddLeg" type="button">Add leg</button><button id="photoSave" type="button" class="primary">Save reviewed ticket as Pending</button></div>
+      </div>
+    </details>
     <details class="muted-box"><summary>Import placed bets from a file</summary>
       <p class="small-note">Choose a private Odds Board bet-import JSON file. Review dates, amounts and apps before saving. Matching picks already logged for that game date are updated, preserving results and original cover snapshots. New tickets start Pending.</p>
       <label for="betImportFile">Bet import file</label><input id="betImportFile" type="file" accept=".json,application/json">
@@ -2199,6 +2217,84 @@ updateEVInputs();calculateEV();
       next[index]=merged;updated++;
     }return {entries:next,added,updated};
   }
+  const photoLegs=$('photoLegs');
+  function photoField(label,value='',type='text'){
+    const box=document.createElement('label');box.textContent=label;const field=document.createElement('input');field.type=type;field.value=value;box.append(field);return {box,field};
+  }
+  function photoAddLeg(data={}){
+    const card=document.createElement('div');card.className='log-card photo-leg';
+    const title=document.createElement('strong');title.textContent='Selection '+(photoLegs.children.length+1);
+    const grid=document.createElement('div');grid.className='grid';const fields={};
+    for(const [key,label,type] of [['sport','League','select'],['day','Game date (Central)','date'],['game','Matchup (Away @ Home)','text'],['player','Player','text'],['market','Exact market','text'],['outcome','Over / Under','select'],['point','Line (e.g. 1.5)','number']]){
+      if(type==='select'){const box=document.createElement('label');box.textContent=label;const field=document.createElement('select');for(const option of (key==='sport'?['',...TRACK_LEAGUES]:['','Over','Under'])){const el=document.createElement('option');el.value=option;el.textContent=option||'Choose';field.append(el);}field.value=data[key]||'';box.append(field);grid.append(box);fields[key]=field;}
+      else{const {box,field}=photoField(label,data[key]??'',type);if(key==='point')field.step='.5';grid.append(box);fields[key]=field;}
+    }
+    const remove=document.createElement('button');remove.type='button';remove.className='smallbtn';remove.textContent='Remove leg';remove.addEventListener('click',()=>card.remove());card.append(title,grid,remove);card.photoFields=fields;photoLegs.append(card);
+  }
+  function photoGuess(text){
+    const lines=text.split(/\n/).map(x=>x.trim()).filter(Boolean),lower=text.toLowerCase();
+    const app=/prize\s*picks|power\s*play/i.test(text)?'PrizePicks':/novig|\d+\s*Leg\s*Parlay|\d+\+\s+(?:No|Yes)/i.test(text)?'Novig':'';
+    const moneyPair=text.match(/(?:Bought|Amount|Entry)\s*:?\s*\$\s*([\d,.]+)[\s\S]{0,90}?(?:To\s*Pay|Potential\s*Payout)\s*:?\s*\$\s*([\d,.]+)/i);
+    const separateAmounts=/Amount\s+To\s+Pay[\s\S]{0,60}?\$\s*([\d,.]+)\s*[>→]\s*\$\s*([\d,.]+)/i.exec(text);
+    const stake=moneyPair?.[1]||separateAmounts?.[1]||text.match(/\$\s*([\d,.]+)\s+to\s+win/i)?.[1]||'';
+    const payout=moneyPair?.[2]||separateAmounts?.[2]||'';const legs=[];
+    if(app==='Novig'){
+      for(let i=0;i<lines.length;i++){
+        const match=lines[i].replace(/^[^A-Za-z]+/,'').match(/^([A-Z][a-z]+(?:\s+(?:[A-Z][a-z]+|[A-Z]\.)){1,3})\s+(\d+(?:\.\d+)?)\+\s+(No|Yes)\b/i);
+        if(!match)continue;const next=lines.slice(i+1,i+3).find(x=>/points|assists|rebounds|steals|shots|receptions|yards|three pointers|sog/i.test(x))||'';
+        if(!next||legs.some(x=>x.player===match[1]&&x.point===String(Number(match[2])-.5)))continue;
+        legs.push({player:match[1],market:next.replace(/^[^A-Za-z]+/,'').trim(),outcome:match[3].toLowerCase()==='no'?'Under':'Over',point:String(Number(match[2])-.5)});
+      }
+    }else if(app==='PrizePicks'){
+      for(let i=0;i<lines.length;i++){
+        const match=lines[i].replace(/^[^A-Za-z]+/,'').match(/^([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,2})$/);if(!match||/Power Play|Three Pointers|Prize Picks/i.test(lines[i]))continue;
+        const next=lines.slice(i+1,i+5).join(' '),threshold=next.match(/([↑↓]|Over|Under)\s*(\d+(?:\.\d+)?)/i),market=next.match(/\b(SOG|Assists|Points|Rebounds|Shots|Steals|Blocks)\b/i);
+        if(threshold&&market)legs.push({player:match[1],market:market[1],outcome:/↓|Under/i.test(threshold[1])?'Under':'Over',point:threshold[2]});
+        else if(/^[A-Z]{2,3}\s*[-·]/.test(next))legs.push({player:match[1]});
+      }
+    }
+    if(!legs.length){const match=text.match(/([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,2})\s+(Points\s*\+\s*Assists|Points|Assists|Shots)[\s\S]{0,120}?(\d+(?:\.\d+)?)\+/i);
+      if(match)legs.push({player:match[1],market:match[2],outcome:'Over',point:String(Number(match[3])-.5)});}
+    if(!legs.length){const single=lines.find(x=>/[A-Z][a-z]+\s+[A-Z][a-z]+\s+(?:Points|Assists|Shots)/.test(x)),head=text.match(/\b(\d+(?:\.\d+)?)\+/);if(single&&head){const match=single.match(/^([A-Z][a-z]+\s+[A-Z][a-z]+)\s+(.*)$/);if(match)legs.push({player:match[1],market:match[2],outcome:'Over',point:String(Number(head[1])-.5)});}}
+    const sport=(text.match(/\b(NHL|NBA|NFL|MLB|WNBA|NCAAB|NCAAF)\b/i)||[])[1]?.toUpperCase()||'';
+    if(sport)for(const leg of legs)leg.sport=sport;
+    return {app,stake,payout,legs:legs.slice(0,12),uncertain:!app||!legs.length||/to\s+win/i.test(lower)};
+  }
+  $('photoReadText').addEventListener('click',async()=>{
+    const files=[...$('betPhoto').files];if(!files.length){$('photoStatus').textContent='Choose screenshots first.';return;}
+    if(files.length>4||files.some(f=>!f.type.startsWith('image/')||f.size>15000000)){$('photoStatus').textContent='Choose up to four image screenshots, each under 15 MB.';return;}
+    const button=$('photoReadText');button.disabled=true;$('photoStatus').textContent='Loading the on-device text reader…';let worker;
+    try{
+      if(!window.Tesseract){await new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';script.onload=resolve;script.onerror=()=>reject(Error('Could not load the image text reader. Check your connection.'));document.head.append(script);});}
+      worker=await window.Tesseract.createWorker('eng',1,{logger:m=>{if(m.status==='recognizing text')$('photoStatus').textContent='Reading image: '+Math.round((m.progress||0)*100)+'%';}});
+      const texts=[];for(const file of files){const result=await worker.recognize(file);texts.push(result.data.text||'');}
+      $('photoText').value=texts.join('\n\n');$('photoStatus').textContent='Text read from '+files.length+' image(s). Tap Fill ticket from text, then correct every field before saving. Images stayed on this device.';
+      $('photoParse').click();
+    }catch(e){$('photoStatus').textContent='Could not read screenshot: '+String(e.message||e)+'. You can paste text into the box and fill the ticket.';}
+    finally{if(worker)await worker.terminate();button.disabled=false;}
+  });
+  $('photoParse').addEventListener('click',()=>{
+    const text=$('photoText').value.trim();if(!text){$('photoStatus').textContent='Read a screenshot or paste its text first.';return;}
+    const guess=photoGuess(text);$('photoTicket').hidden=false;$('photoApp').value=guess.app;$('photoStake').value=guess.stake;$('photoReturn').value=guess.payout;$('photoPlaced').value='';photoLegs.replaceChildren();for(const leg of guess.legs)photoAddLeg(leg);if(!guess.legs.length)photoAddLeg();
+    $('photoStatus').textContent='Draft ticket filled. '+(guess.uncertain?'Some fields could not be identified. ':'')+'Choose dates, matchup and exact market for every leg. Check cost and TOTAL return against the app.';
+  });
+  $('photoAddLeg').addEventListener('click',()=>photoAddLeg());
+  $('photoSave').addEventListener('click',()=>{
+    try{
+      const legs=[...photoLegs.children].map(card=>Object.fromEntries(Object.entries(card.photoFields).map(([k,v])=>[k,v.value.trim()])));
+      if(!legs.length||legs.length>12)throw Error('Use 1–12 selections.');
+      const app=$('photoApp').value;if(!app)throw Error('Choose the betting app.');
+      const shared={placedDate:$('photoPlaced').value,stake:Number($('photoStake').value),quotedPayout:Number($('photoReturn').value),note:'Reviewed screenshot import from '+app};
+      if(!$('photoStake').value||!$('photoReturn').value)throw Error('Enter the actual cost and quoted TOTAL return.');
+      const doc={type:'augi-bet-import',v:1,importId:'screenshot-'+Date.now(),singles:[],parlays:[],notes:''};
+      if(legs.length===1)doc.singles=[{...shared,...legs[0],book:app}];else doc.parlays=[{...shared,platform:app,legs}];
+      const normalized=normalizeBetImport(doc),s=mergeImportedBets(placedSingles,normalized.singles,'single'),p=mergeImportedBets(placedParlays,normalized.parlays,'parlay');
+      if(!window.confirm('Save this reviewed '+legs.length+'-selection '+app+' ticket as Pending? Make sure the dates, matchups, thresholds, amount and total return match the app.'))return;
+      const oldSingles=localStorage.getItem(SINGLE_LOG_KEY),oldParlays=localStorage.getItem(PARLAY_LOG_KEY);
+      try{localStorage.setItem(SINGLE_LOG_KEY,JSON.stringify(s.entries));localStorage.setItem(PARLAY_LOG_KEY,JSON.stringify(p.entries));}catch(_){if(oldSingles===null)localStorage.removeItem(SINGLE_LOG_KEY);else localStorage.setItem(SINGLE_LOG_KEY,oldSingles);if(oldParlays===null)localStorage.removeItem(PARLAY_LOG_KEY);else localStorage.setItem(PARLAY_LOG_KEY,oldParlays);throw Error('Browser storage is full. Nothing was imported.');}
+      placedSingles=s.entries;placedParlays=p.entries;logSelectedDate=shared.placedDate;logVisibleMonth=shared.placedDate.slice(0,7);$('logAllDates').checked=false;renderBetLog();render();syncSoon();$('photoStatus').textContent='Saved as Pending on '+shared.placedDate+(s.updated+p.updated?' (updated matching ticket)':'')+'. Screenshot text was not saved; the ticket will sync if Sync is on.';$('photoTicket').hidden=true;
+    }catch(e){$('photoStatus').textContent='Ticket not saved: '+String(e.message||e);}
+  });
   let betImportRows=[];
   $('betImportFile').addEventListener('change',async()=>{
     $('betImportApply').hidden=true;$('betImportPreview').replaceChildren();betImportRows=[];
