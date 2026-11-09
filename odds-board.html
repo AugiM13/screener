@@ -562,20 +562,22 @@
       </div>
       <div class="actions"><button id="saveManualSingle" type="button" class="primary">Save placed single as Pending</button><span id="manualSingleStatus" class="hint" role="status"></span></div>
     </details>
-    <details class="muted-box"><summary>Import a bet screenshot (Novig / PrizePicks)</summary>
+    <details class="muted-box"><summary>Import a bet screenshot</summary>
       <p class="small-note">Choose a screenshot from your phone. Text is read in this browser; inspect every field before saving. Cropped screenshots may lack the game date or full market. No bet is placed and no image is saved or synced.</p>
       <label for="betPhoto">Bet screenshot</label><input id="betPhoto" type="file" accept="image/*" multiple>
-      <div id="photoStatus" class="small-note" role="status" aria-live="polite">Novig and PrizePicks tickets supported first. Select one or more screenshots of the same ticket.</div>
+      <div id="photoStatus" class="small-note" role="status" aria-live="polite">Novig, PrizePicks, DraftKings Predictions and Pick6. Select one or more screenshots of the same ticket.</div>
       <label for="photoText">Text found (you can correct it)</label><textarea id="photoText" rows="8" style="width:100%" placeholder="Screenshot text will appear here"></textarea>
       <div class="actions"><button id="photoReadText" type="button">Read screenshot</button><button id="photoParse" type="button">Fill ticket from text</button></div>
       <div id="photoTicket" hidden>
         <div class="grid">
-          <div><label for="photoApp">App</label><select id="photoApp"><option value="">Choose app</option><option>Novig</option><option>PrizePicks</option><option>DraftKings</option><option>Kalshi</option><option>Other</option></select></div>
+          <div><label for="photoApp">App / product</label><select id="photoApp"><option value="">Choose app</option><option>Novig</option><option>PrizePicks</option><option>DraftKings Predictions</option><option>DraftKings Pick6</option><option>DraftKings Sportsbook</option><option>Kalshi</option><option>Other</option></select></div>
           <div><label for="photoPlaced">Date placed (Central)</label><input id="photoPlaced" type="date"></div>
           <div><label for="photoStake">Actual cost ($)</label><input id="photoStake" type="number" min=".01" step=".01"></div>
-          <div><label for="photoReturn">Quoted total return ($)</label><input id="photoReturn" type="number" min=".01" step=".01"></div>
+          <div><label for="photoReturn">Quoted total return ($, if shown)</label><input id="photoReturn" type="number" min=".01" step=".01"></div>
+          <div><label for="photoResult">Result</label><select id="photoResult"><option value="pending">Pending / unknown</option><option value="won">Won</option><option value="lost">Lost</option><option value="push">Push</option></select></div>
+          <div><label for="photoActualReturn">Actual amount returned ($, if settled)</label><input id="photoActualReturn" type="number" min="0" step=".01"></div>
         </div>
-        <p class="small-note">“To win” can mean profit rather than total return. Check the app's ticket before filling quoted total return. A 14+ pick becomes Over 13.5 only when that is the exact selection.</p>
+        <p class="small-note">“To win” can mean profit rather than total return; leave quoted total return blank if unknown. $0 winnings can be recorded as Lost with actual return $0 after checking the settled ticket. A 14+ pick becomes Over 13.5 only when that is the exact selection.</p>
         <div id="photoLegs"></div>
         <div class="actions"><button id="photoAddLeg" type="button">Add leg</button><button id="photoSave" type="button" class="primary">Save reviewed ticket as Pending</button></div>
       </div>
@@ -2122,7 +2124,7 @@ updateEVInputs();calculateEV();
     entry.payoutNote='';
     if(entry.type!=='flex'&&results.some(x=>x==='lost')){entry.result='lost';entry.payout=0;}
     else if((entry.type==='flex'&&results.some(x=>x==='lost'))||results.some(x=>x==='push')){entry.result='pending';entry.payout=null;return;}
-    else if(results.length&&results.every(x=>x==='won')){entry.result='won';entry.payout=+(entry.stake*entry.multiplier).toFixed(2);entry.payoutNote='Quoted all-hit return; verify actual payout in app.';}
+    else if(results.length&&results.every(x=>x==='won')&&Number.isFinite(entry.multiplier)&&entry.multiplier>0){entry.result='won';entry.payout=+(entry.stake*entry.multiplier).toFixed(2);entry.payoutNote='Quoted all-hit return; verify actual payout in app.';}
     else {entry.result='pending';entry.payout=null;}
     entry.settledAt=entry.result==='pending'?null:new Date().toISOString();entry.resultSource=entry.result==='pending'?null:'ESPN';
   }
@@ -2132,7 +2134,7 @@ updateEVInputs();calculateEV();
     if(!entries.length){const p=document.createElement('p');p.className='empty';p.textContent='No placed parlays for this date selection.';host.append(p);return;}
     for(const entry of [...entries].reverse()){
       const card=document.createElement('div');card.className='log-card';const title=document.createElement('strong');title.textContent=entry.platform+' · '+entry.type+' · '+entry.legs.length+' legs · '+money(entry.stake);card.append(title,betResultBadge(entry));
-      const meta=document.createElement('div');meta.className='sub';meta.textContent=(entry.atPrecision==='date'?placedPeriod(entry.at,'day')+' (placement time unavailable)':new Date(entry.at).toLocaleString('en-US',{timeZone:'America/Chicago'})+' Central')+' · '+(entry.ticket?'Ticket '+entry.ticket+' · ':'')+'all-hit quote '+Number(entry.multiplier.toFixed(4))+'×'+(entry.partialQuote?' · flex partial quote '+money(entry.partialQuote):'')+(Number.isFinite(entry.payout)?' · '+(entry.payoutNote?'quoted':'actual')+' return '+money(entry.payout):'');card.append(meta);
+      const meta=document.createElement('div');meta.className='sub';meta.textContent=(entry.atPrecision==='date'?placedPeriod(entry.at,'day')+' (placement time unavailable)':new Date(entry.at).toLocaleString('en-US',{timeZone:'America/Chicago'})+' Central')+' · '+(entry.ticket?'Ticket '+entry.ticket+' · ':'')+(Number.isFinite(entry.multiplier)?'all-hit quote '+entry.multiplier.toFixed(4)+'×':'all-hit quote unavailable')+(entry.partialQuote?' · flex partial quote '+money(entry.partialQuote):'')+(Number.isFinite(entry.payout)?' · '+(entry.payoutNote?'quoted':'actual')+' return '+money(entry.payout):'');card.append(meta);
       for(const [i,leg] of entry.legs.entries()){
         const line=document.createElement('div');line.className='log-leg';const summary=document.createElement('strong');summary.textContent=(i+1)+'. '+(leg.player&&leg.player!=='—'?leg.player+' · ':'')+leg.market+' '+leg.outcome+' '+(leg.point==='—'?'':leg.point);line.append(summary,betResultBadge(leg,false));
         const detail=document.createElement('div');detail.className='sub';detail.textContent=leg.game+' · '+(leg.sport||'League needed')+(Number.isFinite(leg.actual)?' · final stat '+leg.actual:'')+(leg.resultNote?' · '+leg.resultNote:'');line.append(detail);
@@ -2199,11 +2201,11 @@ updateEVInputs();calculateEV();
     const pick=p=>{if(!p||!validImportDate(p.day)||!str(p.game)||!str(p.player)||!str(p.market)||!['Over','Under'].includes(p.outcome)||p.point===null||p.point===undefined||p.point===''||!Number.isFinite(Number(p.point)))throw Error('A pick is missing its game date, matchup, player or exact line.');
       const x={day:p.day,game:str(p.game),player:str(p.player),team:str(p.team,20),market:str(p.market),outcome:p.outcome,point:String(p.point),sport:str(p.sport,12),start:null,cover:null,result:'pending',payout:null,resultNote:'Imported from screenshot; final result not verified.'};
       if(!TRACK_LEAGUES.includes(x.sport))throw Error('A pick needs a supported league.');x.key=rowKey(x);return x;};
-    const ticket=p=>{if(!p||!Number.isFinite(p.stake)||p.stake<=0||!validImportDate(p.placedDate)||!Number.isFinite(p.quotedPayout)||p.quotedPayout<=0)throw Error('Each ticket needs a placed date, positive cost and quoted total return.');
+    const ticket=p=>{if(!p||!Number.isFinite(p.stake)||p.stake<=0||!validImportDate(p.placedDate)||!(doc.source==='screenshot'&&p.quotedPayout==null)&&(!Number.isFinite(p.quotedPayout)||p.quotedPayout<=0))throw Error('Each ticket needs a placed date and positive cost; JSON imports also need quoted total return.');
       const exact=p.at&&Number.isFinite(Date.parse(p.at))&&placedPeriod(p.at,'day')===p.placedDate;
-      return {at:exact?p.at:p.placedDate+'T12:00:00-06:00',atPrecision:exact?'time':'date',stake:+p.stake.toFixed(2),quotedPayout:+p.quotedPayout.toFixed(2),result:'pending',payout:null,imported:true,importNote:str(p.note,600)};};
+      return {at:exact?p.at:p.placedDate+'T12:00:00-06:00',atPrecision:exact?'time':'date',stake:+p.stake.toFixed(2),quotedPayout:p.quotedPayout==null?null:+p.quotedPayout.toFixed(2),result:'pending',payout:null,imported:true,importNote:str(p.note,600)};};
     const singles=doc.singles.map((p,i)=>({...pick(p),...ticket(p),id:'import:'+str(doc.importId||'file',70)+':s'+i,book:str(p.book||'App not specified'),odds:null,netPct:null}));
-    const parlays=doc.parlays.map((p,i)=>{if(!Array.isArray(p.legs)||p.legs.length<2||p.legs.length>12)throw Error('A slip needs 2–12 exact legs.');const t=ticket(p);return {...t,id:'import:'+str(doc.importId||'file',70)+':p'+i,platform:str(p.platform||'App not specified'),type:'standard',multiplier:t.quotedPayout/t.stake,legs:p.legs.map(pick),ticket:str(p.ticket,80)};});
+    const parlays=doc.parlays.map((p,i)=>{if(!Array.isArray(p.legs)||p.legs.length<2||p.legs.length>12)throw Error('A slip needs 2–12 exact legs.');const t=ticket(p);return {...t,id:'import:'+str(doc.importId||'file',70)+':p'+i,platform:str(p.platform||'App not specified'),type:'standard',multiplier:t.quotedPayout==null?null:t.quotedPayout/t.stake,legs:p.legs.map(pick),ticket:str(p.ticket,80)};});
     return {singles,parlays,notes:str(doc.notes,1500)};
   }
   function importParlayKey(p){return p.legs.map(x=>x.key+'@'+(x.day||gameDay(x))).sort().join('||');}
@@ -2212,7 +2214,7 @@ updateEVInputs();calculateEV();
     for(const entry of incoming){const index=next.findIndex(e=>e.id===entry.id||(kind==='single'?e.key===entry.key&&e.day===entry.day:importParlayKey(e)===importParlayKey(entry)));
       if(index<0){next.push(entry);added++;continue;}
       const old=next[index],merged={...old,...entry,id:old.id};
-      for(const k of ['result','payout','payoutNote','resultSource','settledAt','actual','resultNote','cover','stars','netPct','outlier','sweet'])if(old[k]!==undefined&&old[k]!==null)merged[k]=old[k];
+      for(const k of ['result','payout','payoutNote','resultSource','settledAt','actual','resultNote','cover','stars','netPct','outlier','sweet'])if(old[k]!==undefined&&old[k]!==null&&!(old.result==='pending'&&entry.result!=='pending'&&['result','payout','payoutNote','resultSource','settledAt','resultNote'].includes(k)))merged[k]=old[k];
       if(kind==='parlay')merged.legs=entry.legs.map(leg=>{const prev=old.legs.find(l=>l.key===leg.key&&(l.day||gameDay(l))===leg.day);return prev?{...leg,...prev,day:leg.day}:leg;});
       next[index]=merged;updated++;
     }return {entries:next,added,updated};
@@ -2233,7 +2235,7 @@ updateEVInputs();calculateEV();
   }
   function photoGuess(text){
     const lines=text.split(/\n/).map(x=>x.trim()).filter(Boolean),lower=text.toLowerCase();
-    const app=/prize\s*picks|power\s*play/i.test(text)?'PrizePicks':/novig|\d+\s*Leg\s*Parlay|\d+\+\s+(?:No|Yes)/i.test(text)?'Novig':'';
+    const app=/picks\s+correct|\bMORE\s*[|!]\s*\d+(?:\.\d+)?\s*(?:PTS|AST|REB)|pick\s*6/i.test(text)?'DraftKings Pick6':/prize\s*picks|power\s*play/i.test(text)?'PrizePicks':/novig|\d+\s*Leg\s*Parlay|\d+\+\s+(?:No|Yes)/i.test(text)?'Novig':/Bought\s*:?\s*\$[\s\S]{0,70}To\s*Pay\s*:?\s*\$/i.test(text)?'DraftKings Predictions':'';
     const moneyPair=text.match(/(?:Bought|Amount|Entry)\s*:?\s*\$\s*([\d,.]+)[\s\S]{0,90}?(?:To\s*Pay|Potential\s*Payout)\s*:?\s*\$\s*([\d,.]+)/i);
     const separateAmounts=/Amount\s+To\s+Pay[\s\S]{0,60}?\$\s*([\d,.]+)\s*[>→]\s*\$\s*([\d,.]+)/i.exec(text);
     const stake=moneyPair?.[1]||separateAmounts?.[1]||text.match(/\$\s*([\d,.]+)\s+to\s+win/i)?.[1]||'';
@@ -2245,6 +2247,11 @@ updateEVInputs();calculateEV();
         if(!next||legs.some(x=>x.player===match[1]&&x.point===String(Number(match[2])-.5)))continue;
         legs.push({player:match[1],market:next.replace(/^[^A-Za-z]+/,'').trim(),outcome:match[3].toLowerCase()==='no'?'Under':'Over',point:String(Number(match[2])-.5)});
       }
+    }else if(app==='DraftKings Pick6'){
+      const names=(text.match(/\b[A-Z]\.\s*[A-Z][a-z]+\b/g)||[]).slice(0,12);
+      const picks=[...text.matchAll(/\b(MORE|LESS)\s*[|!:>\s]*([\d]+(?:\.\d+)?)\s*(PTS|AST|REB|3PM|STL|BLK|SOG)\b/ig)];
+      const markets={PTS:'Points',AST:'Assists',REB:'Rebounds','3PM':'Three Pointers Made',STL:'Steals',BLK:'Blocks',SOG:'Shots on goal'};
+      for(let i=0;i<Math.max(names.length,picks.length)&&i<12;i++)legs.push({player:names[i]||'',market:markets[picks[i]?.[3]?.toUpperCase()]||'',outcome:picks[i]?picks[i][1].toUpperCase()==='MORE'?'Over':'Under':'',point:picks[i]?.[2]||''});
     }else if(app==='PrizePicks'){
       for(let i=0;i<lines.length;i++){
         const match=lines[i].replace(/^[^A-Za-z]+/,'').match(/^([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,2})$/);if(!match||/Power Play|Three Pointers|Prize Picks/i.test(lines[i]))continue;
@@ -2258,7 +2265,7 @@ updateEVInputs();calculateEV();
     if(!legs.length){const single=lines.find(x=>/[A-Z][a-z]+\s+[A-Z][a-z]+\s+(?:Points|Assists|Shots)/.test(x)),head=text.match(/\b(\d+(?:\.\d+)?)\+/);if(single&&head){const match=single.match(/^([A-Z][a-z]+\s+[A-Z][a-z]+)\s+(.*)$/);if(match)legs.push({player:match[1],market:match[2],outcome:'Over',point:String(Number(head[1])-.5)});}}
     const sport=(text.match(/\b(NHL|NBA|NFL|MLB|WNBA|NCAAB|NCAAF)\b/i)||[])[1]?.toUpperCase()||'';
     if(sport)for(const leg of legs)leg.sport=sport;
-    return {app,stake,payout,legs:legs.slice(0,12),uncertain:!app||!legs.length||/to\s+win/i.test(lower)};
+    return {app,stake,payout,legs:legs.slice(0,12),uncertain:!app||!legs.length||app==='DraftKings Pick6'||/to\s+win/i.test(lower)};
   }
   $('photoReadText').addEventListener('click',async()=>{
     const files=[...$('betPhoto').files];if(!files.length){$('photoStatus').textContent='Choose screenshots first.';return;}
@@ -2284,11 +2291,14 @@ updateEVInputs();calculateEV();
       const legs=[...photoLegs.children].map(card=>Object.fromEntries(Object.entries(card.photoFields).map(([k,v])=>[k,v.value.trim()])));
       if(!legs.length||legs.length>12)throw Error('Use 1–12 selections.');
       const app=$('photoApp').value;if(!app)throw Error('Choose the betting app.');
-      const shared={placedDate:$('photoPlaced').value,stake:Number($('photoStake').value),quotedPayout:Number($('photoReturn').value),note:'Reviewed screenshot import from '+app};
-      if(!$('photoStake').value||!$('photoReturn').value)throw Error('Enter the actual cost and quoted TOTAL return.');
-      const doc={type:'augi-bet-import',v:1,importId:'screenshot-'+Date.now(),singles:[],parlays:[],notes:''};
+      const shared={placedDate:$('photoPlaced').value,stake:Number($('photoStake').value),quotedPayout:$('photoReturn').value?Number($('photoReturn').value):null,note:'Reviewed screenshot import from '+app};
+      if(!$('photoStake').value)throw Error('Enter the actual cost.');
+      const result=$('photoResult').value,actual=$('photoActualReturn').value;
+      if(result!=='pending'&&(actual===''||!Number.isFinite(Number(actual))||Number(actual)<0))throw Error('Enter the actual amount returned for a settled result, including $0 for a loss.');
+      const doc={type:'augi-bet-import',v:1,source:'screenshot',importId:'screenshot-'+Date.now(),singles:[],parlays:[],notes:''};
       if(legs.length===1)doc.singles=[{...shared,...legs[0],book:app}];else doc.parlays=[{...shared,platform:app,legs}];
-      const normalized=normalizeBetImport(doc),s=mergeImportedBets(placedSingles,normalized.singles,'single'),p=mergeImportedBets(placedParlays,normalized.parlays,'parlay');
+      const normalized=normalizeBetImport(doc);for(const entry of [...normalized.singles,...normalized.parlays])if(result!=='pending'){entry.result=result;entry.payout=Number(actual);entry.resultSource='manual';entry.resultNote='Result and actual return reviewed from app screenshot.';entry.settledAt=new Date().toISOString();}
+      const s=mergeImportedBets(placedSingles,normalized.singles,'single'),p=mergeImportedBets(placedParlays,normalized.parlays,'parlay');
       if(!window.confirm('Save this reviewed '+legs.length+'-selection '+app+' ticket as Pending? Make sure the dates, matchups, thresholds, amount and total return match the app.'))return;
       const oldSingles=localStorage.getItem(SINGLE_LOG_KEY),oldParlays=localStorage.getItem(PARLAY_LOG_KEY);
       try{localStorage.setItem(SINGLE_LOG_KEY,JSON.stringify(s.entries));localStorage.setItem(PARLAY_LOG_KEY,JSON.stringify(p.entries));}catch(_){if(oldSingles===null)localStorage.removeItem(SINGLE_LOG_KEY);else localStorage.setItem(SINGLE_LOG_KEY,oldSingles);if(oldParlays===null)localStorage.removeItem(PARLAY_LOG_KEY);else localStorage.setItem(PARLAY_LOG_KEY,oldParlays);throw Error('Browser storage is full. Nothing was imported.');}
