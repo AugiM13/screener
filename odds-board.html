@@ -222,7 +222,7 @@
       </div>
     </div>
     <div class="selection-filters" aria-label="Scan choices">
-      <div><label>Market type to scan</label><div class="switcher" role="group" aria-label="Select market type to scan"><button type="button" data-kind="games" aria-pressed="true">Game lines</button><button type="button" data-kind="props" aria-pressed="false">Player props</button></div></div>
+      <div id="scanTypeControl"><label>Market type to scan</label><div class="switcher" role="group" aria-label="Select market type to scan"><button type="button" data-kind="games" aria-pressed="true">Game lines</button><button type="button" data-kind="props" aria-pressed="false">Player props</button></div></div>
       <div id="scanLeagueSlot"></div>
       <div id="scanMarketSlot"></div>
     </div>
@@ -231,7 +231,8 @@
       <div><label for="sport">Sport / league</label><select id="sport"><option value="basketball_nba">NBA</option><option value="icehockey_nhl">NHL</option><option value="americanfootball_nfl">NFL</option><option value="americanfootball_ncaaf">NCAAF</option><option value="baseball_mlb">MLB</option><option value="basketball_wnba">WNBA</option></select></div>
       <div><label for="region">Book region</label><select id="region"><option value="us">US sportsbooks</option><option value="eu">Europe (may include Pinnacle)</option><option value="us_dfs">US DFS (where available)</option><option value="us_ex">US exchanges (where available)</option></select></div>
     </div>
-    <p id="sourceNote" class="small-note" aria-live="polite">The Odds API · Game lines. Choose the league and market above, then scan below. Changing tabs does not spend API credits.</p>
+    <p id="sourceNote" class="small-note" aria-live="polite">The Odds API · Choose a league, then scan game lines and player props together. Changing tabs does not spend API credits.</p>
+    <div class="actions" id="combinedOddsAction"><button type="button" class="primary" id="loadOddsAll">Scan game lines + player props</button><span class="hint">Includes moneyline, spreads, totals and available player-prop categories for up to 3 upcoming games. Shows the estimated credit cost before any paid request.</span></div>
     <div class="actions"><button type="button" id="checkToday">Check today’s games (free)</button><span class="hint">Checks the selected league before a scan. A scheduled game may have no lines at this source.</span></div>
     <div id="todayStatus" class="status" role="status" aria-live="polite" style="margin-top:12px">Today’s schedule has not been checked.</div>
   </section>
@@ -457,6 +458,7 @@
       <label><input id="sweetOnly" type="checkbox"> 🎯 Sweet Spot only</label>
       <label><input id="feelingLucky" type="checkbox"> 🍀 Feeling Lucky singles</label>
       <label for="screenView">Review lines</label><select id="screenView" style="min-width:172px;width:auto"><option value="pass">Passing singles</option><option value="outlier">$1 outlier singles</option><option value="skip">Skipped singles</option><option value="unverified">Unverified</option><option value="parlay">Parlay legs (45–80%)</option><option value="all">All statuses</option></select>
+      <label for="boardSort">Sort</label><select id="boardSort" style="width:auto;min-width:140px"><option value="start">Game time</option><option value="net">Net EV · highest</option><option value="blend">Best blended edge</option><option value="cover">Cover · highest</option></select>
       <label for="globalSearch">Search combined results</label><input id="globalSearch" type="search" style="width:140px;min-height:35px" placeholder="Player / book">
       <button id="savedPicks" type="button" class="smallbtn">Saved picks · all sports</button>
       <button id="showPhotos" type="button" class="smallbtn">Refresh player photos (ESPN)</button>
@@ -469,8 +471,8 @@
     <div class="sentinel-main">
       <button id="sentinelRun" type="button" class="primary">Sentinel · Clean cached Board</button>
       <label><input id="sentinelFree" type="checkbox" checked> Also search Kalshi + Polymarket US (free public listings)</label>
-      <label><input id="sentinelBP" type="checkbox"> Recheck old BettingPros quotes (up to 10 page requests)</label>
-      <span class="small-note">Cached Board audit and ESPN checks are free. BettingPros recheck is optional and confirms cost before fetching; results may be partial. You can still draft and log old picks.</span>
+      <label><input id="sentinelBP" type="checkbox"> Recheck other old BettingPros quotes (up to 10 page requests)</label>
+      <span class="small-note">Cached Board audit and ESPN checks are free. Stale Novig picks from BettingPros offer an exact Novig quote recheck with a cost confirmation. Other BettingPros quotes use the optional checkbox. Partial results remain unconfirmed; old picks can still be logged with a stale-price warning.</span>
     </div>
     <div class="small-note">Passing singles show by default. Regular singles need 52.5%+ cover and 3+ BettingPros stars. Turn on Feeling Lucky to allow qualified 45–&lt;52.5% cover picks as optional singles with the same star, EV, odds, stake and bankroll checks. The parlay lane remains 45–80% regardless of this toggle. Colors outside that lane are informational. Notes explain each decision.</div>
     <div id="sentinelStatus" class="small-note">Sentinel has not reviewed this cached Board yet. Load lines or restore a recent snapshot, then choose Clean cached Board.</div>
@@ -614,7 +616,7 @@
 (() => {
   'use strict';
   const $ = id => document.getElementById(id);
-  const btns = [$('loadSports'), $('loadGames'), $('loadOdds'), $('loadProps'), $('bpBooks'), $('bpMarkets'), $('bpProps'),$('checkSources'),$('loadSGO'),$('loadSB'),$('loadPapi'),$('loadSgoUsage'),$('bpGameSetup'),$('bpGameScan')];
+  const btns = [$('loadSports'), $('loadGames'), $('loadOdds'), $('loadProps'), $('loadOddsAll'), $('bpBooks'), $('bpMarkets'), $('bpProps'),$('checkSources'),$('loadSGO'),$('loadSB'),$('loadPapi'),$('loadSgoUsage'),$('bpGameSetup'),$('bpGameScan')];
   // The Odds API provides book.key and book.title, not a logo URL.
   // Favicons load over HTTPS from Google's favicon service; if unavailable,
   // a local initials badge appears. We never send PASS or odds data to this URL.
@@ -745,7 +747,7 @@
   });
   function showScanControls(){
     for(const c of movableControls)c.marker.parentNode.insertBefore(c.element,c.marker);
-    const selected=view.source==='odds'?(view.type==='props'?['sport','propMarket']:['sport','market'])
+    const selected=view.source==='odds'?['sport']
       :view.source==='bp'?(view.type==='props'?['bpSport','bpMarket']:['bpGameSport','bpGameCategory'])
       :view.source==='sgo'?['sgoLeague']:[];
     for(const [slot,id] of [['scanLeagueSlot',selected[0]],['scanMarketSlot',selected[1]]]){
@@ -757,8 +759,10 @@ function showView() {
   showScanControls();
   const odds=view.source==='odds',bp=view.source==='bp',sgo=view.source==='sgo',sb=view.source==='sb',papi=view.source==='papi',props=view.type==='props';
   $('oddsShared').hidden=!odds;
-  $('oddsGamePanel').hidden=!(odds&&!props);
-  $('oddsPropsPanel').hidden=!(odds&&props);
+  $('combinedOddsAction').hidden=!odds;
+  $('scanTypeControl').hidden=odds||sgo||sb||papi;
+  $('oddsGamePanel').hidden=true;
+  $('oddsPropsPanel').hidden=true;
   $('bpPropsPanel').hidden=!(bp&&props);
   $('bpGamesPanel').hidden=!(bp&&!props);
   $('sgoPanel').hidden=!sgo;
@@ -767,9 +771,9 @@ function showView() {
   document.querySelectorAll('[data-source]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.source===view.source)));
   document.querySelectorAll('[data-kind]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.kind===view.type)));
   const name={odds:'The Odds API',bp:'BettingPros',sgo:'SportsGameOdds',sb:'Sportsbook API',papi:'OddsPapi'}[view.source];
-  $('sourceNote').textContent=name+' · '+(props?'Player props':'Game lines')+'. Choose the league and market above, then scan below. Switching tabs makes no API requests.';
+  $('sourceNote').textContent=name+' · '+(odds||sgo?'Game lines and player props together':props?'Player props':'Game lines')+'. Choose the league above, then scan below. Switching sources makes no API requests.';
   rows=[];lastMode='none';render();metadata([]);$('updated').textContent='';
-  status('Ready to load '+(props?'player props':'game lines')+' from '+name+'.','');
+  status('Ready to load '+(odds||sgo?'game lines and player props':props?'player props':'game lines')+' from '+name+'.','');
   if(document.body.classList.contains('connected'))checkTodayGames();
 }
   const bpSession={miss:0,hit:0,total:0};
@@ -1204,7 +1208,7 @@ function referenceFairMap(game,market,bookKey='pinnacle'){
     }
   }
   const BOARD_CACHE_PREFIX='augi.boardCache.v090.';
-  const CACHE_FIELDS=['game','start','player','team','market','outcome','point','price','book','bookKey','books','ev','reference','referenceProb','modelProb','modelEv','mktProb','pairSum','stars','providerEventId','providerMarketId','providerBookId','matchupVerified','scheduleSource','athleteEspnId','fantasyProsId','photoUrl','app','sport','_cachedAt'];
+  const CACHE_FIELDS=['game','start','player','team','market','outcome','point','price','book','bookKey','books','ev','reference','referenceProb','modelProb','modelEv','mktProb','pairSum','stars','providerEventId','providerMarketId','providerBookId','matchupVerified','scheduleSource','athleteEspnId','fantasyProsId','photoUrl','app','sport','quoteState','_cachedAt'];
   function cacheStorageKey(){try{return BOARD_CACHE_PREFIX+new URL(baseUrl()).host;}catch{return null;}}
   function persistBoardCache(){const key=cacheStorageKey();if(!key)return;
     try{const packs=[...sourceSnapshots.entries()].slice(-32).map(([key,pack])=>({key,source:snapshotSource(key,pack),mode:pack.mode,at:pack.at,rows:pack.rows.slice(0,450).map(row=>Object.fromEntries(CACHE_FIELDS.filter(k=>row[k]!==undefined).map(k=>[k,row[k]])))})).filter(x=>x.rows.length);
@@ -1240,6 +1244,7 @@ function referenceFairMap(game,market,bookKey='pinnacle'){
   $('globalSearch').addEventListener('input',render);
   $('savedPicks').addEventListener('click',()=>{$('displaySources').value='combined';$('screenView').value='pass';$('passesOnly').checked=true;$('globalSearch').value='';saveDisplay();status('Showing saved qualifying singles across all scanned sports. Choose Parlay legs to see eligible cached legs; recheck old prices before drafting.','good');});
   $('screenView').addEventListener('change',()=>{$('passesOnly').checked=$('screenView').value==='pass';render();});
+  $('boardSort').addEventListener('change',render);
   $('showLoggedPicks').addEventListener('change',render);
   $('sweetOnly').addEventListener('change',render);
   $('feelingLucky').addEventListener('change',()=>{if($('feelingLucky').checked){$('screenView').value='pass';$('passesOnly').checked=true;}saveDisplay();});
@@ -1273,6 +1278,10 @@ function referenceFairMap(game,market,bookKey='pinnacle'){
     const bpWithoutModel=eligible.some(r=>r.feed==='bp')&&!eligible.some(r=>r.feed==='bp'&&Number.isFinite(r.modelProb));
     $('screenDiagnosis').textContent=counts.unverified?(counts.pass===0?'No verified singles to show. ':'')+'Unverified: '+topReasons.join(' / ')+(bpWithoutModel?' · BettingPros rows have no model probability. The updated Worker must be deployed, and the provider must supply that field; then rescan.':''):'';
     const screenView=$('screenView').value;const shown=(screenView==='all'?eligible:eligible.filter(r=>screenView==='parlay'?isParlayReview(r):screenView==='outlier'?(screenRow(r).kind==='pass'&&screenRow(r).outlier):screenRow(r).kind===screenView)).filter(r=>!$('sweetOnly').checked||isSweetSpot(r));
+    const sort=$('boardSort').value;if(sort!=='start')shown.sort((a,b)=>{
+      const value=r=>{const m=screenRow(r).math;return !m?-Infinity:sort==='net'?m.net:sort==='blend'?m.blendNet:m.fair;};
+      return value(b)-value(a)||sortLines(a,b);
+    });
     if(!shown.length){const tr=document.createElement('tr');putCell(tr,eligible.length?'No '+(screenView==='pass'?'passing singles':'rows in this review category')+'. Choose Unverified, Skipped singles, or All statuses to inspect the '+eligible.length+' available selections.':loggedCount?'All matching picks are already in Bet log. Turn on “Show picks already in Bet log” to review them.':working.length?'No rows match these filters. Adjust the market or search filters.':'No lines loaded. Scan a source on the Board first.','empty').colSpan=12;body.appendChild(tr);return;}
     const frag=document.createDocumentFragment();
     for(const r of shown){const tr=document.createElement('tr');const rScreen=screenRow(r);tr.className='result-'+rScreen.kind;tr.title=rScreen.why;const game=putCell(tr,r.game);const sub=document.createElement('span');sub.className='sub';sub.textContent=dateLabel(r.start);game.append(sub);addPlayerCell(tr,r);putCell(tr,r.market);putCell(tr,r.outcome);putCell(tr,r.point);putCell(tr,priceLabel(r.price),'price');addBookCell(tr,r.bookKey,r.book+(combined?' · '+({odds:'Odds API',bp:'BettingPros',sgo:'SportsGameOdds',sb:'Sportsbook API',papi:'OddsPapi'}[r.feed]||r.feed):''));putCell(tr,String(r.books));
@@ -1283,6 +1292,7 @@ function referenceFairMap(game,market,bookKey='pinnacle'){
       const td=document.createElement('td');td.textContent=ev+' ';
       const flag=document.createElement('span');flag.className='line-state '+sc.kind;flag.textContent=sc.kind.toUpperCase();flag.title=sc.why+(r.reference?' · '+r.reference:'');td.append(flag);
       if(sc.math){const band=coverBand(sc.math.fair),chip=document.createElement('span');chip.className='cover-chip cover-'+band;chip.textContent=COVER_NAMES[band]+' · '+coverLabel(sc.math.fair);chip.title='Projected cover band; does not change eligibility by itself';td.append(chip);}
+      if(r.quoteState==='unconfirmed'){const warning=document.createElement('span');warning.className='line-state skip';warning.textContent='NOVIG QUOTE UNCONFIRMED';warning.title='The limited Novig recheck did not confirm this exact quote. EV and PASS use the old price; verify in the app before placing.';td.append(warning);}
       const oldQuote=Date.now()-(r._cachedAt||0)>QUOTE_MAX_AGE;if(oldQuote){const age=document.createElement('span');age.className='line-state skip';age.textContent='STALE · '+quoteAgeLabel(r._cachedAt);age.title='Saved calculation and price. Sentinel can check BettingPros availability; you can still draft or log a bet with its actual app odds and amount.';td.append(age);}tr.append(td);
       if(sc.kind==='pass'&&sc.outlier){const tag=document.createElement('span');tag.className='line-state skip';tag.textContent='OUTLIER · $'+Number($('ruleOutlierStake').value).toFixed(2);tag.title='Outlier single stake, separate from your regular unit';td.append(tag);}
       if(sc.lucky){const tag=document.createElement('span');tag.className='line-state skip';tag.textContent='🍀 OPTIONAL SINGLE';tag.title='Feeling Lucky is on; this pick also remains eligible for the parlay draft';td.append(tag);}
@@ -1412,6 +1422,32 @@ function referenceFairMap(game,market,bookKey='pinnacle'){
     const games=sortGames(data);gamesCache.set(sport,{games,at:Date.now()});updateGameOptions(games);return games;
   }
   function setBusy(value){busy=value;for(const b of btns)b.disabled=value; if(!value)updatePropMarkets();}
+  async function scanOddsTogether(){
+    setBusy(true);status('Checking upcoming games for the combined scan…');
+    try{
+      const sport=$('sport').value,region=$('region').value,games=await gamesForSport(sport),selected=games.slice(0,3);
+      const markets=(PROP_MARKETS[sport]||[]).map(([key])=>key);
+      const estimate=3+selected.length*markets.length;
+      if(!window.confirm('Scan moneyline, spreads and totals, plus '+markets.length+' player-prop categories across up to '+selected.length+' upcoming game(s) in '+region+'?\n\nEstimated maximum: '+estimate+' Odds API credits if all markets are returned. The Worker may return cached responses at zero cost. Continue?')){status('Combined scan cancelled; no paid request made.','warn');return;}
+      const results=[],errors=[];let remaining=null,checked=0;
+      try{
+        const response=await request('/odds?sport='+encodeURIComponent(sport)+'&regions='+encodeURIComponent(region)+'&markets=h2h,spreads,totals');
+        for(const market of ['h2h','spreads','totals'])results.push(...parseGameOdds(response.data,market).lines);
+        remaining=response.remaining;
+      }catch(e){errors.push('Game lines: '+e.message);}
+      for(const game of selected){if(!markets.length)break;
+        status('Combined scan: player props '+(checked+1)+' / '+selected.length+' · '+gameName(game));
+        try{const response=await request('/odds/event?sport='+encodeURIComponent(sport)+'&eventId='+encodeURIComponent(game.id)+'&market='+encodeURIComponent(markets.join(','))+'&region='+encodeURIComponent(region),'object');
+          results.push(...parsePropGame(response.data,markets.join(',')));remaining=response.remaining;checked++;
+        }catch(e){errors.push(gameName(game)+': '+e.message);if([401,402,403,429].includes(e.status))break;}
+      }
+      rows=results.sort(sortLines);lastMode='combinedOdds';if(!rows.length&&!errors.length)clearEmptyScan();render();
+      metadata([checked+' prop games checked',rows.length+' combined selections',remaining!=null?'Credits remaining: '+remaining:'',errors.length?errors.length+' request error(s)':'']);
+      status('Combined Odds API scan: '+rows.length+' selections; '+rows.filter(r=>Number.isFinite(r.referenceProb)).length+' exact independent fair-price references.'+(errors.length?' Partial results: '+errors.slice(0,2).join('; '):''),errors.length?'warn':'good');
+      $('updated').textContent='Loaded '+new Date().toLocaleTimeString();
+    }catch(e){status(String(e.message||e),'bad');}finally{setBusy(false);}
+  }
+  $('loadOddsAll').addEventListener('click',scanOddsTogether);
   async function doAction(kind) {
     setBusy(true);status('Loading…');
     try {
@@ -1776,13 +1812,14 @@ async function extraAction(kind){
       $('sgoUsage').textContent='Plan: '+(data.tier||'Not reported')+' | '+parts.join(' | ');
       status('SportsGameOdds usage checked. Limits reflect provider reporting, not another API.','good');
     }else if(kind==='sgo'){
-      const limit=$('sgoLimit').value,league=$('sgoLeague').value,kindName=view.type;
-      if(!window.confirm('Fetch up to '+limit+' '+league+' SportsGameOdds events? This uses provider requests unless cached.')){status('Scan cancelled.','warn');return;}
-      const {data}=await request('/sgo/events?league='+encodeURIComponent(league)+'&limit='+limit+'&kind='+kindName,'object');
-      if(!Array.isArray(data.rows))throw Error('SportsGameOdds returned no rows field.');
-      rows=data.rows.map(r=>({...r,point:pointLabel(r.point),referenceProb:Number.isFinite(r.fairChance)&&r.fairChance>0&&r.fairChance<1?r.fairChance:null,ev:null,reference:Number.isFinite(r.fairChance)?'SportsGameOdds fair odds at exact line':'No exact provider fair odds'}));lastMode='sgo';if(!rows.length)clearEmptyScan();render();
-      metadata([String(data.eventCount)+' events',String(rows.length)+' quote rows',data.truncated?'Results capped at 700 rows':'',data.hasMore?'More provider pages exist':'']);
-      status('SportsGameOdds scan loaded; estimates use provider fair odds only when exact lines match. Blank EV means insufficient comparison data.','good');
+      const limit=$('sgoLimit').value,league=$('sgoLeague').value;
+      if(!window.confirm('Fetch game lines and player props for up to '+limit+' '+league+' SportsGameOdds events? This makes up to two provider requests unless cached.')){status('Scan cancelled.','warn');return;}
+      const results=await Promise.allSettled(['games','props'].map(kind=>request('/sgo/events?league='+encodeURIComponent(league)+'&limit='+limit+'&kind='+kind,'object')));
+      const data=results.filter(x=>x.status==='fulfilled'&&Array.isArray(x.value.data?.rows)).map(x=>x.value.data);
+      if(!data.length)throw Error('SportsGameOdds game and prop requests failed or returned no rows field.');
+      rows=data.flatMap(x=>x.rows).map(r=>({...r,point:pointLabel(r.point),referenceProb:Number.isFinite(r.fairChance)&&r.fairChance>0&&r.fairChance<1?r.fairChance:null,ev:null,reference:Number.isFinite(r.fairChance)?'SportsGameOdds fair odds at exact line':'No exact provider fair odds'}));lastMode='sgo';if(!rows.length)clearEmptyScan();render();
+      metadata([String(data[0].eventCount)+' events',String(rows.length)+' game + prop quote rows',data.length<2?'One feed failed':'Both feeds returned',data.some(x=>x.truncated)?'Results capped at 700 per feed':'',data.some(x=>x.hasMore)?'More provider pages exist':'']);
+      status('SportsGameOdds loaded game lines and player props'+(data.length<2?' (one feed failed)':'')+'. EV uses fair odds only at the exact quoted line.','good');
     }else if(kind==='sb'){
       if(!window.confirm('Fetch Sportsbook API advantages? This may count toward your plan usage.')){status('Request cancelled.','warn');return;}
       const {data}=await request('/sb/advantages','object');
@@ -2566,10 +2603,12 @@ updateEVInputs();calculateEV();
     slipLegs=[];persistSlip();$('slipTicket').value='';$('placeSlipMessage').textContent='Placed slip saved as Pending in Bet log.';persistParlays();goTab('betlog');
   });
   renderBetLog();
-  async function sentinelRecheckBP(packs){
+  async function sentinelRecheckBP(packs,{novigOnly=false,excludeNovig=false}={}){
     const groups=new Map();let missingIds=0;
     for(const [key,pack] of packs){if(snapshotSource(key,pack)!=='bp'||pack.mode!=='bp')continue;
       for(const r of pack.rows){if(Date.now()-(r._cachedAt||0)<=QUOTE_MAX_AGE)continue;
+        const novig=String(r.providerBookId)==='60'||normalizeBook(r.book)==='novig';
+        if(novigOnly&&!novig||excludeNovig&&novig)continue;
         const market=String(r.providerMarketId||key.split('|')[3]||''),event=String(r.providerEventId||''),sport=sourceSport(r),day=gameDay(r);
         if(!/^\d+$/.test(market)||!/^\d+$/.test(event)||!sport||!day){missingIds++;continue;}
         const id=[sport,day,market].join('|');if(!groups.has(id))groups.set(id,{sport,day,market,rows:[]});groups.get(id).rows.push(r);
@@ -2577,28 +2616,28 @@ updateEVInputs();calculateEV();
     }
     const selected=[...groups.values()].sort((a,b)=>Math.min(...a.rows.map(r=>r._cachedAt||0))-Math.min(...b.rows.map(r=>r._cachedAt||0))).slice(0,5);
     const deferred=groups.size-selected.length;
-    if(!selected.length)return 'No stale BettingPros rows with exact event and market IDs to recheck'+(missingIds?'; '+missingIds+' older cached row(s) need a new source scan for IDs':'')+'. 0 BettingPros calls.';
-    if(!window.confirm('Recheck '+selected.reduce((n,g)=>n+g.rows.length,0)+' stale BettingPros selections across '+selected.length+' sport/date/market group(s)?\n\nUp to '+selected.length*2+' BettingPros page requests (20 props per page), possibly fewer if the Worker has a cached response. Results may be partial; an absent selection will stay on the Board as unconfirmed. '+(deferred?deferred+' additional group(s) wait for the next recheck.':'')+' Continue?'))return 'BettingPros recheck cancelled; cached selections remain available. 0 BettingPros calls.';
+    if(!selected.length)return 'No stale '+(novigOnly?'Novig':'BettingPros')+' rows with exact event and market IDs to recheck'+(missingIds?'; '+missingIds+' older cached row(s) need a new source scan for IDs':'')+'. 0 BettingPros calls.';
+    if(!window.confirm('Recheck '+selected.reduce((n,g)=>n+g.rows.length,0)+' stale '+(novigOnly?'Novig':'BettingPros')+' selections across '+selected.length+' sport/date/market group(s)?\n\nUp to '+selected.length*2+' BettingPros page requests (20 props per page), possibly fewer if cached. A missing selection remains unconfirmed, not a verified current price. '+(deferred?deferred+' additional group(s) wait for the next recheck.':'')+' Continue?'))return (novigOnly?'Novig':'BettingPros')+' recheck cancelled; cached selections remain available. 0 BettingPros calls.';
     let checked=0,matched=0,changed=0,unconfirmed=0,errors=0,actualPages=0;
     for(const g of selected){
       try{
-        const path='/props?sport='+encodeURIComponent(g.sport)+'&date='+encodeURIComponent(g.day)+'&market_id='+g.market+'&pages=2&ev_only=0';
+        const path='/props?sport='+encodeURIComponent(g.sport)+'&date='+encodeURIComponent(g.day)+'&market_id='+g.market+'&pages=2&ev_only=0'+(novigOnly?'&bp_books=60':'');
         const {data}=await request(path,'object');actualPages+=Number(data.pages_fetched)||0;
         const current=parseScreenProps(data,g.sport),fetched=Date.parse(data._meta?.fetched_at||'');
         for(const r of g.rows){checked++;
-          const same=current.find(n=>String(n.providerEventId)===String(r.providerEventId)&&String(n.providerMarketId)===String(r.providerMarketId)&&String(n.player).trim().toLowerCase()===String(r.player).trim().toLowerCase()&&n.outcome===r.outcome&&Number(n.point)===Number(r.point));
-          if(!same){unconfirmed++;sentinelEvidence.set(rowNoteKey({...r,feed:'bp'}),{at:Date.now(),message:'BettingPros recheck: exact selection not found in '+(Number(data.pages_fetched)||0)+' ranked page(s). Availability is unconfirmed; this partial result does not prove it was removed. Verify in the app or rescan the sport.'});continue;}
+          const same=current.find(n=>String(n.providerEventId)===String(r.providerEventId)&&String(n.providerMarketId)===String(r.providerMarketId)&&String(n.player).trim().toLowerCase()===String(r.player).trim().toLowerCase()&&n.outcome===r.outcome&&Number(n.point)===Number(r.point)&&(!novigOnly||String(n.providerBookId)==='60'));
+          if(!same){unconfirmed++;if(novigOnly)r.quoteState='unconfirmed';sentinelEvidence.set(rowNoteKey({...r,feed:'bp'}),{at:Date.now(),message:'BettingPros recheck: exact selection not found in '+(Number(data.pages_fetched)||0)+' ranked page(s). Availability is unconfirmed; this partial result does not prove it was removed. Verify in the app or rescan the sport.'});continue;}
           const beforePrice=r.price,beforeBook=r.book,previousNoteKey=rowNoteKey({...r,feed:'bp'});
-          Object.assign(r,{price:same.price,book:same.book,bookKey:same.bookKey,providerBookId:same.providerBookId,modelProb:same.modelProb,modelEv:same.modelEv,mktProb:same.mktProb,stars:same.stars,reference:same.reference,_cachedAt:Number.isFinite(fetched)?fetched:Date.now()});matched++;
+          Object.assign(r,{price:same.price,book:same.book,bookKey:same.bookKey,providerBookId:same.providerBookId,modelProb:same.modelProb,modelEv:same.modelEv,mktProb:same.mktProb,stars:same.stars,reference:same.reference,quoteState:'verified',_cachedAt:Number.isFinite(fetched)?fetched:Date.now()});matched++;
           const moved=beforePrice!==r.price||beforeBook!==r.book;if(moved)changed++;
           if(lineNotes.has(previousNoteKey)&&!lineNotes.has(rowNoteKey({...r,feed:'bp'})))saveLineNote({...r,feed:'bp'},lineNotes.get(previousNoteKey));
           sentinelEvidence.set(rowNoteKey({...r,feed:'bp'}),{at:Date.now(),message:'BettingPros recheck: exact event, market, player, side and line appeared in ranked results. '+(moved?'Best returned quote changed from '+beforeBook+' '+priceLabel(beforePrice)+' to '+r.book+' '+priceLabel(r.price)+'.':'Returned quote '+r.book+' '+priceLabel(r.price)+' is unchanged.')+' Worker quote time: '+new Date(r._cachedAt).toLocaleString()+'. Confirm the app before placing.'});
           for(const leg of slipLegs){if(leg.key!==rowKey(r))continue;leg.stale=leg.stale||moved;leg.quoteAt=r._cachedAt;}
         }
-      }catch(_){errors++;for(const r of g.rows)sentinelEvidence.set(rowNoteKey({...r,feed:'bp'}),{at:Date.now(),message:'BettingPros recheck failed for this sport/market; saved quote remains unchanged. Retry later or verify in the app.'});}
+      }catch(_){errors++;for(const r of g.rows){if(novigOnly)r.quoteState='unconfirmed';sentinelEvidence.set(rowNoteKey({...r,feed:'bp'}),{at:Date.now(),message:'BettingPros recheck failed for this sport/market; saved quote remains unchanged. Retry later or verify in the app.'});}}
     }
-    if(matched){for(const [key,pack]of packs){if(snapshotSource(key,pack)==='bp'&&pack.rows.some(r=>selected.some(g=>g.rows.includes(r))))pack.at=Date.now();}persistBoardCache();}if(slipLegs.length)persistSlip();
-    return 'BettingPros recheck: '+matched+' exact selection(s) returned ('+changed+' best quote changes), '+unconfirmed+' not confirmed in partial pages, '+errors+' group error(s), '+actualPages+' page(s) fetched; up to '+selected.length*2+' upstream requests (cache hits may use zero). '+(deferred?deferred+' group(s) deferred. ':'')+(missingIds?missingIds+' older row(s) lack IDs and need a fresh source scan. ':'')+'Unconfirmed rows remain available.';
+    if(matched){for(const [key,pack]of packs){if(snapshotSource(key,pack)==='bp'&&pack.rows.some(r=>selected.some(g=>g.rows.includes(r))))pack.at=Date.now();}}if(novigOnly||matched)persistBoardCache();if(slipLegs.length)persistSlip();
+    return (novigOnly?'Novig quote':'BettingPros')+' recheck: '+matched+' exact selection(s) returned ('+changed+' quote changes), '+unconfirmed+' not confirmed in partial pages, '+errors+' group error(s), '+actualPages+' page(s) fetched; up to '+selected.length*2+' upstream requests (cache hits may use zero). '+(deferred?deferred+' group(s) deferred. ':'')+(missingIds?missingIds+' older row(s) lack IDs and need a fresh source scan. ':'')+'Unconfirmed rows remain available with stale-price warning.';
   }
   async function sentinelRun(){
     const removedByTime=pruneFinishedBoard();
@@ -2636,13 +2675,15 @@ updateEVInputs();calculateEV();
       exchangeMessage=success+' of 2 free exchange feeds responded; '+markets.length+' sampled listings; '+candidates+' cached props have possible player-name matches (NOT verified).';
       if(!success)exchangeMessage='Free exchange listings unavailable; cached screening still completed. No BettingPros calls.';
     }
-    const bpMessage=$('sentinelBP').checked?await sentinelRecheckBP([...sourceSnapshots.entries()].filter(([,pack])=>pack?.rows?.length)):'0 BettingPros calls. Cached sportsbook prices were not refreshed; enable the optional recheck or scan the source.';
+    const currentPacks=[...sourceSnapshots.entries()].filter(([,pack])=>pack?.rows?.length);
+    const novigMessage=await sentinelRecheckBP(currentPacks,{novigOnly:true});
+    const bpMessage=$('sentinelBP').checked?await sentinelRecheckBP(currentPacks,{excludeNovig:true}):'Other BettingPros quotes were not refreshed; enable the optional recheck or scan the source.';
     all=[...sourceSnapshots.entries()].flatMap(([key,p])=>p.rows.map(r=>({...r,feed:snapshotSource(key,p)})));
     counts.pass=counts.skip=counts.unverified=0;for(const r of all)counts[screenRow(r).kind]++;
     lastSentinelCheck=Date.now();render();
     let flagged=0;for(const leg of slipLegs){const match=all.find(r=>rowKey(r)===leg.key);if(!match||!screenRow(match).parlay||Date.now()-(match._cachedAt||0)>20*60*1000){leg.stale=true;flagged++;}}
     if(flagged)persistSlip();
-    $('sentinelStatus').textContent='Sentinel removed '+(removedByTime+removedByESPN)+' started/finished line(s) and checked '+all.length+' current cached lines: '+counts.pass+' PASS · '+counts.skip+' SKIP · '+counts.unverified+' UNVERIFIED. ESPN checked '+espnChecked+' scoreboard(s). '+flagged+' draft legs flagged. '+exchangeMessage+' '+bpMessage;
+    $('sentinelStatus').textContent='Sentinel removed '+(removedByTime+removedByESPN)+' started/finished line(s) and checked '+all.length+' current cached lines: '+counts.pass+' PASS · '+counts.skip+' SKIP · '+counts.unverified+' UNVERIFIED. ESPN checked '+espnChecked+' scoreboard(s). '+flagged+' draft legs flagged. '+exchangeMessage+' '+novigMessage+' '+bpMessage;
     }catch(error){$('sentinelStatus').textContent='Sentinel interrupted: '+String(error.message||error)+'. Cached picks are still available.';}finally{$('sentinelRun').disabled=false;}
   }
   // Sentinel diagnostics: read-only search of Kalshi and Polymarket US.
