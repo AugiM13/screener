@@ -333,16 +333,17 @@
     <div class="stat-tile"><span>Full Kelly (adjusted)</span><strong id="metricKelly">—</strong></div>
     <div class="stat-tile"><span>Suggested stake · capped</span><strong id="metricStake">—</strong></div>
   </div>
-  <p id="evNotes" class="small-note">EV depends on the fair probability and actual fee. Enter an effective fee for this manual check; the Board uses its book-specific fee settings.</p>
+  <p id="evNotes" class="small-note">EV depends on the fair probability and actual fee. This manual math check has no BettingPros rating; the Board requires at least 3 stars before a single can pass.</p>
 </section>
 <section class="panel" data-area="settings" aria-labelledby="rules-title">
   <div class="bar"><h2 id="rules-title">Screening rules &amp; stake sizing</h2><span class="chip">Saved in this browser · no secrets</span></div>
-  <p class="small-note">The kit's fair probability, fee-adjusted EV, market blend and fractional Kelly screen singles. Logged singles count toward game and daily limits. Feeling Lucky is an optional 45–55% single lane on the Board; the parlay tab has its own 45–80% cover range. Provider fields and exact lines must be present; missing model probability stays UNVERIFIED.</p>
+  <p class="small-note">The kit's fair probability, fee-adjusted EV, market blend and fractional Kelly screen singles. Regular singles need at least 52.5% projected cover and 3 BettingPros stars. Logged singles count toward game and daily limits. Feeling Lucky is an optional 45–&lt;52.5% single lane on the Board; the parlay tab keeps its own 45–80% cover range. Provider fields and exact lines must be present; missing model probability stays UNVERIFIED.</p>
   <div class="grid" style="margin-top:14px">
     <div><label for="ruleMinOdds">Odds floor</label><input id="ruleMinOdds" type="number" value="-300" step="5"></div>
     <div><label for="ruleMaxOdds">Odds ceiling</label><input id="ruleMaxOdds" type="number" value="500" step="5"></div>
-    <div><label for="ruleSingleMin">Single cover min (%)</label><input id="ruleSingleMin" type="number" value="55" min="0" max="100" step="1"></div>
-    <div><label for="ruleSingleMax">Single cover max (%)</label><input id="ruleSingleMax" type="number" value="70" min="0" max="100" step="1"></div>
+    <div><label for="ruleSingleMin">Single cover min (%)</label><input id="ruleSingleMin" type="number" value="52.5" min="0" max="100" step="0.5"></div>
+    <div><label for="ruleSingleMax">Single cover max (%)</label><input id="ruleSingleMax" type="number" value="100" min="0" max="100" step="0.5"></div>
+    <div><label for="ruleSingleStars">Single minimum BettingPros stars</label><input id="ruleSingleStars" type="number" value="3" min="1" max="5" step="1"></div>
     <div><label for="ruleNetFloor">Net EV floor (%)</label><input id="ruleNetFloor" type="number" value="1.5" step="0.5"></div>
     <div><label for="ruleGrossMax">Gross EV ceiling (%)</label><input id="ruleGrossMax" type="number" value="40" step="1"></div>
     <div><label for="ruleOutlierEv">Outlier net EV over (%)</label><input id="ruleOutlierEv" type="number" value="15" min="0" step="1"></div>
@@ -450,14 +451,14 @@
       
       <span id="screenSummary" class="hint">Showing screened PASS results by default</span>
     </div>
-    <div class="cover-legend" aria-label="Projected cover color ranges"><span class="cover-chip cover-5">Long Shot · &lt;45%</span><span class="cover-chip cover-1">Feeling Lucky · 45–&lt;55%</span><span class="cover-chip cover-2">Balanced · 55–&lt;65%</span><span class="cover-chip cover-3">Favored · 65–&lt;75%</span><span class="cover-chip cover-4">Heavy Favorite · 75–80%</span><span class="cover-chip cover-6">High Cover · &gt;80%</span></div>
+    <div class="cover-legend" aria-label="Projected cover color ranges"><span class="cover-chip cover-5">Long Shot · &lt;45%</span><span class="cover-chip cover-1">Feeling Lucky · 45–&lt;52.5%</span><span class="cover-chip cover-2">Balanced · 52.5–&lt;65%</span><span class="cover-chip cover-3">Favored · 65–&lt;75%</span><span class="cover-chip cover-4">Heavy Favorite · 75–80%</span><span class="cover-chip cover-6">High Cover · &gt;80%</span></div>
     <p id="screenDiagnosis" class="small-note" aria-live="polite"></p>
     <div class="sentinel-main">
       <button id="sentinelRun" type="button" class="primary">Sentinel · Clean cached Board</button>
       <label><input id="sentinelFree" type="checkbox" checked> Also search Kalshi + Polymarket US (free public listings)</label>
       <span class="small-note">Uses already loaded lines; <strong>0 BettingPros requests</strong>. Checks your Settings, timestamps, and available evidence. Free exchange candidates are not treated as verified fair prices.</span>
     </div>
-    <div class="small-note">Passing singles show by default. Turn on Feeling Lucky to allow qualified 45–&lt;55% cover picks as optional singles; the usual EV, odds, stake and bankroll checks still apply. The parlay lane remains 45–80% regardless of this toggle. Colors outside that lane are informational. Notes explain each decision.</div>
+    <div class="small-note">Passing singles show by default. Regular singles need 52.5%+ cover and 3+ BettingPros stars. Turn on Feeling Lucky to allow qualified 45–&lt;52.5% cover picks as optional singles with the same star, EV, odds, stake and bankroll checks. The parlay lane remains 45–80% regardless of this toggle. Colors outside that lane are informational. Notes explain each decision.</div>
     <div id="sentinelStatus" class="small-note">Sentinel has not reviewed this cached Board yet. Load lines or restore a recent snapshot, then choose Clean cached Board.</div>
     <div class="overflow"><table>
       <thead><tr><th>Game / start</th><th>Player</th><th>Market</th><th>Outcome</th><th>Line</th><th>Best odds</th><th>Book / source</th><th>Books</th><th>BP rating</th><th>EV / Screen</th><th>Suggested stake</th><th>Actions / notes</th></tr></thead>
@@ -510,7 +511,7 @@
   <section class="panel" data-area="parlay" aria-labelledby="parlay-title">
     <div class="bar"><h2 id="parlay-title">Parlay / pick'em draft</h2><span class="chip">App payout · draft only</span></div>
     <p class="small-note">Each leg needs a 45–80% projected cover and positive net EV. Colors show each leg's cover band, not the full slip's win chance. Verify the exact line and payout in your app; this draft is never submitted automatically.</p>
-    <div class="cover-legend"><span class="cover-chip cover-5">Long Shot · &lt;45% (outside parlay)</span><span class="cover-chip cover-1">Feeling Lucky · 45–&lt;55%</span><span class="cover-chip cover-2">Balanced · 55–&lt;65%</span><span class="cover-chip cover-3">Favored · 65–&lt;75%</span><span class="cover-chip cover-4">Heavy Favorite · 75–80%</span><span class="cover-chip cover-6">High Cover · &gt;80% (outside parlay)</span></div>
+    <div class="cover-legend"><span class="cover-chip cover-5">Long Shot · &lt;45% (outside parlay)</span><span class="cover-chip cover-1">Feeling Lucky · 45–&lt;52.5%</span><span class="cover-chip cover-2">Balanced · 52.5–&lt;65%</span><span class="cover-chip cover-3">Favored · 65–&lt;75%</span><span class="cover-chip cover-4">Heavy Favorite · 75–80%</span><span class="cover-chip cover-6">High Cover · &gt;80% (outside parlay)</span></div>
     <div class="grid" style="margin-top:14px">
       <div><label for="slipApp">Platform</label><select id="slipApp"><option>PrizePicks</option><option>Underdog</option><option>Sleeper</option><option>DraftKings Pick 6</option><option>Kalshi</option><option>Sportsbook / other</option></select></div>
       <div><label for="slipType">Slip type</label><select id="slipType"><option value="power">Power (all must win)</option><option value="flex">Flex (partial payouts possible)</option><option value="standard">Standard parlay</option></select></div>
@@ -828,14 +829,14 @@ function calculateEV(){
   const pct=n=>(n>=0?'+':'')+n.toFixed(2)+'%';
   $('evResult').textContent='Reference: '+(mode==='prob'?'Entered fair probability':mode==='two'?'Two-way de-vig':'Three-way de-vig')+' · Book price '+priceLabel(offered)+'.';
   $('evResult').className='status good';
-  $('evVerdict').textContent=(passes?'PASS THE MANUAL SCREEN':'SKIP / REVIEW')+(reasons.length?' · '+reasons.join('; '):' · clears your EV, odds and stake caps');
+  $('evVerdict').textContent=(passes?'MATH PASSES · CHECK 3+ STARS ON BOARD':'SKIP / REVIEW')+(reasons.length?' · '+reasons.join('; '):' · clears your EV, odds and stake caps');
   $('evVerdict').className='decision '+(passes?'pass':'skip');
   const assign=(id,value,color)=>{$(id).textContent=value;$(id).className=color===undefined?'':(color>=0?'ev-pos':'ev-neg');};
   assign('metricFair',(fair*100).toFixed(2)+'%');assign('metricImplied',(book*100).toFixed(2)+'%');
   assign('metricGross',pct(gross*100),gross);assign('metricNet',pct(net*100),net);
   assign('metricExpected',signedMoney(stake*net),net);assign('metricWin',signedMoney(stake*((d-1-fee)/(1+fee))),(d-1-fee));
   assign('metricKelly',(100*kellyFull).toFixed(2)+'% of bankroll');assign('metricStake',passes?money(capped):'$0.00');
-  $('evNotes').textContent='Net EV is (gross EV − fee) ÷ (1 + fee). Kelly sizes the fee-adjusted edge with your '+(haircut*100).toFixed(0)+'% edge factor and '+(kellyFraction*100).toFixed(0)+'% Kelly fraction, capped at $'+limit.toFixed(2)+'. The Board also checks its logged game/day exposure and book-specific fees.';
+  $('evNotes').textContent='Net EV is (gross EV − fee) ÷ (1 + fee). Kelly sizes the fee-adjusted edge with your '+(haircut*100).toFixed(0)+'% edge factor and '+(kellyFraction*100).toFixed(0)+'% Kelly fraction, capped at $'+limit.toFixed(2)+'. This manual calculation cannot verify BettingPros stars; the Board also checks its rating, logged game/day exposure and book-specific fees.';
 }
 function updateEVInputs(){const mode=$('evMode').value;$('evProbWrap').hidden=mode!=='prob';$('evRef1Wrap').hidden=mode==='prob';$('evRef2Wrap').hidden=mode==='prob';$('evRef3Wrap').hidden=mode!=='three';}
 // For game market prices, use only a complete Pinnacle two/three-way market.
@@ -977,9 +978,9 @@ function referenceFairMap(game,market){
   let logVisibleMonth=logSelectedDate.slice(0,7);
   function visibleLogEntries(entries){return $('logAllDates').checked?entries:entries.filter(e=>placedPeriod(e.at||new Date().toISOString(),'day')===logSelectedDate);}
   try{const saved=JSON.parse(localStorage.getItem(SINGLE_LOG_KEY)||'[]');if(Array.isArray(saved))placedSingles=saved.filter(x=>x&&x.key&&Number.isFinite(x.stake));}catch(_){}
-  const coverBand=p=>!Number.isFinite(p)||p<0||p>1?0:p<.45?5:p<.55?1:p<.65?2:p<.75?3:p<=.80?4:6;
+  const coverBand=p=>!Number.isFinite(p)||p<0||p>1?0:p<.45?5:p<.525?1:p<.65?2:p<.75?3:p<=.80?4:6;
   const COVER_NAMES=['Unknown cover','Feeling Lucky','Balanced','Favored','Heavy Favorite','Long Shot','High Cover'];
-  const COVER_RANGES=['Unknown cover','45–<55%','55–<65%','65–<75%','75–80%','<45%','>80%'];
+  const COVER_RANGES=['Unknown cover','45–<52.5%','52.5–<65%','65–<75%','75–80%','<45%','>80%'];
   const coverLabel=p=>Number.isFinite(p)?(p*100).toFixed(1)+'%':'—';
   function kitFee(book,offered){
     const name=String(book||'').toLowerCase();
@@ -1030,8 +1031,8 @@ function referenceFairMap(game,market){
     if(!math)return bad('unverified','No valid fair probability at this exact line; a model EV alone cannot replace the missing probability.');
     const bank=Number($('ruleBankroll').value),kelly=Number($('ruleKelly').value),shrink=Number($('ruleHaircut').value),weight=Number($('ruleModelWeight').value);
     const min=Number($('ruleMinStake').value),outlierStake=Number($('ruleOutlierStake').value),max=Number($('ruleMaxStake').value),gameCap=Number($('ruleGameCap').value),dayCap=Number($('ruleDailyCap').value);
-    const singleMin=Number($('ruleSingleMin').value)/100,singleMax=Number($('ruleSingleMax').value)/100;
-    if(![bank,kelly,shrink,weight,min,outlierStake,max,gameCap,dayCap,singleMin,singleMax].every(Number.isFinite)||bank<=0||kelly<0||kelly>1||shrink<0||shrink>1||weight<0||weight>1||min<0||outlierStake<=0||outlierStake>max||max<min||gameCap<0||dayCap<0||singleMin>singleMax)return bad('unverified','Invalid screening or stake settings.');
+    const singleMin=Number($('ruleSingleMin').value)/100,singleMax=Number($('ruleSingleMax').value)/100,singleStars=Number($('ruleSingleStars').value);
+    if(![bank,kelly,shrink,weight,min,outlierStake,max,gameCap,dayCap,singleMin,singleMax,singleStars].every(Number.isFinite)||bank<=0||kelly<0||kelly>1||shrink<0||shrink>1||weight<0||weight>1||min<0||outlierStake<=0||outlierStake>max||max<min||gameCap<0||dayCap<0||singleMin<0||singleMax>1||singleMin>singleMax||!Number.isInteger(singleStars)||singleStars<1||singleStars>5)return bad('unverified','Invalid screening or stake settings.');
     const key=rowKey(r),day=gameDay(r);
     const duplicate=placedSingles.some(x=>x.key===key&&x.day===day);
     const samePlayer=placedSingles.some(x=>x.game===r.game&&x.day===day&&x.player===r.player&&r.player&&r.player!=='—');
@@ -1055,15 +1056,17 @@ function referenceFairMap(game,market){
     if(Number.isFinite(r.pairSum)&&Math.abs(r.pairSum-1)>.02)hard.push('model sides do not devig cleanly');
     if(gameRoom<requiredStake||dayRoom<requiredStake)hard.push('game/day bankroll cap reached');
     const parlay=hard.length===0&&math.fair>=.45&&math.fair<=.80&&math.net>0;
-    const luckyCandidate=$('feelingLucky').checked&&parlay&&math.fair<.55&&(math.fair<singleMin||math.fair>singleMax);
+    const luckyCandidate=$('feelingLucky').checked&&parlay&&math.fair<.525&&(math.fair<singleMin||math.fair>singleMax);
     const reasons=[...hard];
     if(price<Number($('ruleMinOdds').value)||price>Number($('ruleMaxOdds').value))reasons.push('outside single odds range');
     if(/prizepicks|underdog|sleeper|pick.?6/i.test(r.book||''))reasons.push('DFS payout is not a standard single price');
     if((math.fair<singleMin||math.fair>singleMax)&&!luckyCandidate)reasons.push('outside single cover range');
+    if(r.stars==null||!Number.isFinite(Number(r.stars))||Number(r.stars)<1||Number(r.stars)>5)reasons.push('BettingPros stars unavailable (single needs '+singleStars+'+)');
+    else if(Number(r.stars)<singleStars)reasons.push('BettingPros rating under '+singleStars+' stars');
     if(math.net<Number($('ruleNetFloor').value)/100)reasons.push('net EV under single floor');
     if(stake+1e-9<requiredStake||stake<=0)reasons.push('Kelly stake below '+(outlier?'outlier':'regular')+' minimum');
     const lucky=!reasons.length&&luckyCandidate;
-    return {kind:reasons.length?'skip':'pass',why:reasons.length?reasons.join('; '):lucky?'Feeling Lucky single: 45–<55% cover, positive net EV and the regular odds, EV, stake and bankroll checks passed; confirm the actual price.':outlier?'Outlier: capped at $'+outlierStake.toFixed(2)+' after fee-adjusted EV and Kelly checks; confirm the price.':'Kit fee-adjusted EV and fractional Kelly passed; confirm the actual price before placing.',stake:reasons.length?0:+stake.toFixed(2),parlay,math,outlier,lucky};
+    return {kind:reasons.length?'skip':'pass',why:reasons.length?reasons.join('; '):lucky?'Feeling Lucky single: 45–<52.5% cover, '+singleStars+'+ stars, positive net EV and the regular odds, EV, stake and bankroll checks passed; confirm the actual price.':outlier?'Outlier: capped at $'+outlierStake.toFixed(2)+' after fee-adjusted EV and Kelly checks; confirm the price.':'Kit fee-adjusted EV, '+singleStars+'+ BettingPros stars and fractional Kelly passed; confirm the actual price before placing.',stake:reasons.length?0:+stake.toFixed(2),parlay,math,outlier,lucky};
   }
   function isSweetSpot(r,sc=screenRow(r)){
     if(sc.kind!=='pass'||sc.outlier||!(sc.stake>0)||r.stars==null||!Number.isFinite(Number(r.stars))||!sc.math)return false;
@@ -1813,10 +1816,18 @@ updateEVInputs();calculateEV();
     view.type=b.dataset.kind;showView();$('source-label').scrollIntoView({block:'start',behavior:'smooth'});
   }));
   // v0.5.2: no keys or PASS are persisted. EV rules only are saved locally.
-  const RULE_IDS=['ruleMinOdds','ruleMaxOdds','ruleSingleMin','ruleSingleMax','ruleNetFloor','ruleGrossMax','ruleOutlierEv','ruleOutlierGap','ruleOutlierDaily','ruleSweetStars','ruleSweetMin','ruleSweetMax','ruleSweetOddsMin','ruleSweetOddsMax','ruleDailyGoal','ruleBankroll','ruleKelly','ruleHaircut','ruleMinStake','ruleOutlierStake','ruleMaxStake','ruleGameCap','ruleDailyCap','ruleModelWeight','ruleBoardFee','ruleKalshiFee','rulePolyFee'];
+  const RULE_IDS=['ruleMinOdds','ruleMaxOdds','ruleSingleMin','ruleSingleMax','ruleSingleStars','ruleNetFloor','ruleGrossMax','ruleOutlierEv','ruleOutlierGap','ruleOutlierDaily','ruleSweetStars','ruleSweetMin','ruleSweetMax','ruleSweetOddsMin','ruleSweetOddsMax','ruleDailyGoal','ruleBankroll','ruleKelly','ruleHaircut','ruleMinStake','ruleOutlierStake','ruleMaxStake','ruleGameCap','ruleDailyCap','ruleModelWeight','ruleBoardFee','ruleKalshiFee','rulePolyFee'];
   const RULE_DEFAULTS=Object.fromEntries(RULE_IDS.map(id=>[id,$(id).value]));
+  function migrateSingleRange(saved){
+    if(String(saved.ruleSingleMin)==='55'&&String(saved.ruleSingleMax)==='70'){
+      return {...saved,ruleSingleMin:'52.5',ruleSingleMax:'100'};
+    }
+    return saved;
+  }
   try { const saved=JSON.parse(localStorage.getItem('augi.evRules.v052')||'{}');
-    for(const id of RULE_IDS){if(saved[id]!==undefined)$(id).value=String(saved[id]);}
+    const rules=migrateSingleRange(saved);
+    for(const id of RULE_IDS){if(rules[id]!==undefined)$(id).value=String(rules[id]);}
+    if(rules!==saved){localStorage.setItem('augi.evRules.v052',JSON.stringify(rules));localStorage.setItem('augi.syncRulesAt.v1',String(Date.now()));}
   } catch(_) {}
   function saveRules(){
     try{localStorage.setItem('augi.evRules.v052',JSON.stringify(Object.fromEntries(RULE_IDS.map(id=>[id,$(id).value]))));localStorage.setItem('augi.syncRulesAt.v1',String(Date.now()));$('rulesSaved').textContent='Rules saved on this browser.';}
@@ -2561,8 +2572,11 @@ updateEVInputs();calculateEV();
       slipLegs=(doc.draft?.legs||[]).slice(0,12).filter(x=>x&&x.game&&x.market&&x.outcome);
       store(SINGLE_LOG_KEY,JSON.stringify(placedSingles));store(PARLAY_LOG_KEY,JSON.stringify(placedParlays));
       store('augi.slip.v060',JSON.stringify(slipLegs));store('augi.syncDraftAt.v1',String(doc.draft?.at||0));
-      if(doc.rules?.value){store('augi.evRules.v052',doc.rules.value);store('augi.syncRulesAt.v1',String(doc.rules.at||0));
-        try{const data=JSON.parse(doc.rules.value);for(const id of RULE_IDS)if(data[id]!==undefined)$(id).value=String(data[id]);}catch(_){}}
+      if(doc.rules?.value){
+        try{const original=JSON.parse(doc.rules.value),data=migrateSingleRange(original);
+          store('augi.evRules.v052',JSON.stringify(data));store('augi.syncRulesAt.v1',String(data===original?(doc.rules.at||0):Date.now()));
+          for(const id of RULE_IDS)if(data[id]!==undefined)$(id).value=String(data[id]);
+        }catch(_){}}
       if(doc.display?.value){store(VIEW_STORE,doc.display.value);store('augi.syncDisplayAt.v1',String(doc.display.at||0));
         try{const v=JSON.parse(doc.display.value);if(['cash','units'].includes(v.stake))$('displayStake').value=v.stake;if(['combined','source'].includes(v.sources))$('displaySources').value=v.sources;if(Number(v.unit)>0)$('unitValue').value=v.unit;if(typeof v.lucky==='boolean')$('feelingLucky').checked=v.lucky;}catch(_){}}
       for(const [key,pack] of Object.entries(doc.board||{}).slice(0,32)){
