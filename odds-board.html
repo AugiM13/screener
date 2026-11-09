@@ -177,6 +177,18 @@
   .sentinel-main input[type="checkbox"]{width:17px;height:17px;min-height:17px}
   .sentinel-main .small-note{margin:0;flex:1 1 200px}
   @media(max-width:710px){.line-detail-inner{grid-template-columns:1fr}.selection-filters{padding:9px}}
+  @media(max-width:760px){
+    .board-overflow{max-height:none;overflow:visible}
+    .board-table{min-width:0;table-layout:fixed}
+    .board-table thead{display:none}
+    .board-table tbody tr:not(.line-detail){display:grid;grid-template-columns:repeat(2,minmax(0,1fr));border-bottom:2px solid var(--rule);padding:8px}
+    .board-table tbody tr[hidden]{display:none!important}
+    .board-table tbody td{display:block;min-width:0;padding:7px 9px;border:0;overflow-wrap:anywhere}
+    .board-table tbody tr:not(.line-detail) td::before{content:attr(data-label);display:block;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:3px}
+    .board-table tbody tr:not(.line-detail) td:nth-child(1),.board-table tbody tr:not(.line-detail) td:nth-child(2),.board-table tbody tr:not(.line-detail) td:nth-child(3),.board-table tbody tr:not(.line-detail) td:nth-child(10),.board-table tbody tr:not(.line-detail) td:nth-child(12){grid-column:1/-1}
+    .board-table .book-cell{white-space:normal}
+    .board-table .line-detail td{width:100%}
+  }
 </style>
 </head>
 <body>
@@ -460,7 +472,7 @@
     </div>
     <div class="small-note">Passing singles show by default. Regular singles need 52.5%+ cover and 3+ BettingPros stars. Turn on Feeling Lucky to allow qualified 45–&lt;52.5% cover picks as optional singles with the same star, EV, odds, stake and bankroll checks. The parlay lane remains 45–80% regardless of this toggle. Colors outside that lane are informational. Notes explain each decision.</div>
     <div id="sentinelStatus" class="small-note">Sentinel has not reviewed this cached Board yet. Load lines or restore a recent snapshot, then choose Clean cached Board.</div>
-    <div class="overflow"><table>
+    <div class="overflow board-overflow"><table class="board-table">
       <thead><tr><th>Game / start</th><th>Player</th><th>Market</th><th>Outcome</th><th>Line</th><th>Best odds</th><th>Book / source</th><th>Books</th><th>BP rating</th><th>EV / Screen</th><th>Suggested stake</th><th>Actions / notes</th></tr></thead>
       <tbody id="rows"><tr><td colspan="12" class="empty">No lines loaded yet.</td></tr></tbody>
     </table></div>
@@ -493,7 +505,7 @@
 <section class="panel" data-area="live" aria-labelledby="live-title">
     <div class="bar"><h2 id="live-title">Game Hub · Scheduled &amp; Live</h2><span class="chip">ESPN public scoreboard · no betting API credits</span></div>
     <p class="hint">Choose a sport and Scheduled or Live below. Tap a matchup to open its gamecast and exact-game prop search in a new tab.</p>
-    <iframe id="gameHubFrame" title="Game Hub sports and games" data-src="game-hub.html?embed=1" style="display:block;width:100%;min-height:650px;border:0;background:transparent" scrolling="no"></iframe>
+    <iframe id="gameHubFrame" title="Game Hub sports and games" data-src="game-hub.html?embed=1" style="display:block;width:100%;min-height:650px;border:0;background:transparent" scrolling="auto"></iframe>
     <details id="legacyLive"><summary>Classic scorecards and player statistics</summary>
     <p class="small-note">See today's matchups, scores, periods and clocks, then open a game for available player stats. ESPN's unofficial public data may be delayed or unavailable. Refresh is manual unless you enable auto-refresh.</p>
     <div class="live-controls" style="margin-top:15px">
@@ -1148,6 +1160,14 @@ function referenceFairMap(game,market){
   function persistBoardCache(){const key=cacheStorageKey();if(!key)return;
     try{const packs=[...sourceSnapshots.entries()].slice(-32).map(([key,pack])=>({key,source:snapshotSource(key,pack),mode:pack.mode,at:pack.at,rows:pack.rows.slice(0,450).map(row=>Object.fromEntries(CACHE_FIELDS.filter(k=>row[k]!==undefined).map(k=>[k,row[k]])))})).filter(x=>x.rows.length);
       localStorage.setItem(key,JSON.stringify({v:1,at:Date.now(),packs}));}catch(_){} syncSoon();}
+  function pruneFinishedBoard(finishedKeys=new Set()){
+    let removed=0;
+    const keep=r=>{const start=Date.parse(r.start||'');const finished=Number.isFinite(start)&&start<=Date.now()||finishedKeys.has(rowKey(r));
+      if(finished)removed++;return !finished;};
+    for(const pack of sourceSnapshots.values())pack.rows=pack.rows.filter(keep);
+    if(removed)persistBoardCache();
+    return removed;
+  }
   function restoreBoardCache(){const key=cacheStorageKey();if(!key)return 0;let added=0;
     try{const obj=JSON.parse(localStorage.getItem(key)||'null');if(!obj||obj.v!==1||!Array.isArray(obj.packs))return 0;
       for(const p of obj.packs.slice(0,32)){if(!p||!['odds','bp','sgo','sb','papi'].includes(p.source)||!Array.isArray(p.rows)||!Number.isFinite(p.at))continue;
@@ -1180,13 +1200,14 @@ function referenceFairMap(game,market){
   // values >= 1. Convert only for display; this model figure is not a verified edge.
   function bpModelEvPercent(raw){return Math.abs(raw)<=1?raw*100:raw;}
   function render() {
+    pruneFinishedBoard();
     const freshRows=rows!==lastRenderSource&&rows.length>0;
     if(freshRows){const now=Date.now();rows.forEach(r=>{if(!Number.isFinite(r._cachedAt))r._cachedAt=now;});lastRenderSource=rows;lastScannedAt=now;
-      const saved=rows.filter(r=>{const sc=screenRow(r);return (sc.kind==='pass'||sc.parlay)&&!loggedPick(r);});
+      const saved=rows.filter(r=>Date.parse(r.start||'')>now).filter(r=>{const sc=screenRow(r);return (sc.kind==='pass'||sc.parlay)&&!loggedPick(r);});
       const key=snapshotId(view.source,lastMode);retireOverlappingSnapshots(key,now);
       sourceSnapshots.set(key,{source:view.source,rows:saved,at:now,mode:lastMode});persistBoardCache();}
     const body=$('rows');body.replaceChildren();
-    const combined=$('displaySources').value==='combined';const working=combined?[...sourceSnapshots.entries()].flatMap(([key,pack])=>pack.rows.map(r=>({...r,feed:snapshotSource(key,pack)}))):rows.map(r=>({...r,feed:view.source}));
+    const combined=$('displaySources').value==='combined';const working=(combined?[...sourceSnapshots.entries()].flatMap(([key,pack])=>pack.rows.map(r=>({...r,feed:snapshotSource(key,pack)}))):rows.map(r=>({...r,feed:view.source}))).filter(r=>!Number.isFinite(Date.parse(r.start||''))||Date.parse(r.start)>Date.now());
     const query=(combined?$('globalSearch').value:lastMode==='sgo'?$('sgoFilter').value:lastMode==='bp'?$('bpSearch').value:lastMode==='bpGames'?$('bpGameSearch').value:lastMode==='props'?$('propSearch').value:$('search').value).trim().toLowerCase().split(/\s+/).filter(Boolean);
     const selectedApp=$('bpApp').value;
     const matching=working.filter(r=>(combined||lastMode!=='bp'||selectedApp==='all'||r.app===selectedApp)&&query.every(t=>(r.game+' '+r.player+' '+r.market+' '+r.outcome+' '+r.book+' '+r.feed).toLowerCase().includes(t)));
@@ -1223,7 +1244,7 @@ function referenceFairMap(game,market){
       if(sc.parlay){const add=document.createElement('button');add.type='button';add.className='smallbtn cover-chip cover-'+coverBand(sc.math.fair);add.textContent='+ Slip · '+COVER_NAMES[coverBand(sc.math.fair)]+' '+coverLabel(sc.math.fair);add.title='Add eligible leg to draft (no bet placed)';add.disabled=oldQuote;add.addEventListener('click',()=>addSlip(r));act.append(add);}
       const detailBtn=document.createElement('button');detailBtn.className='smallbtn';detailBtn.type='button';detailBtn.style.marginLeft='5px';detailBtn.textContent='Notes';detailBtn.setAttribute('aria-expanded','false');act.append(detailBtn);
       const noteText=lineNotes.get(rowNoteKey(r));if(noteText){const mini=document.createElement('div');mini.className='note-mini';mini.textContent='Personal note saved';act.append(mini);}
-      tr.append(act);frag.append(tr);
+      tr.append(act);[...tr.children].forEach((cell,i)=>cell.dataset.label=['Game / start','Player','Market','Outcome','Line','Best odds','Book / source','Books','BP rating','EV / Screen','Suggested stake','Actions / notes'][i]);frag.append(tr);
       const detailTr=document.createElement('tr');detailTr.className='line-detail';detailTr.hidden=true;const noteTd=document.createElement('td');noteTd.colSpan=12;const noteWrap=document.createElement('div');noteWrap.className='line-detail-inner';
       const evidenceBlock=document.createElement('div');const eh=document.createElement('h4');eh.textContent='Screening & Sentinel notes';evidenceBlock.append(eh);
       for(const message of [sc.kind.toUpperCase()+': '+sc.why,'Source: '+r.feed+' · '+(r.reference||'No fair-price reference'),sc.math?'Cover '+coverLabel(sc.math.fair)+' · gross '+(sc.math.gross*100).toFixed(2)+'% · fee '+(sc.math.fee*100).toFixed(2)+'% · net '+(sc.math.net*100).toFixed(2)+'%':'No calculable fair value','Market: '+marketBucket(r)+' · '+selectionGroup(r).toUpperCase(),r._cachedAt?'Cached: '+new Date(r._cachedAt).toLocaleString('en-US',{timeZone:'America/Chicago'})+' Central':'Snapshot timestamp unavailable',sentinelEvidence.get(rowNoteKey(r))?.message||'Sentinel has not reviewed this selection yet.']){
@@ -1890,11 +1911,20 @@ updateEVInputs();calculateEV();
   }
   const gameHubFrame=$('gameHubFrame');
   gameHubWindows.add(gameHubFrame.contentWindow);
+  function fitGameHub(){
+    if(document.body.dataset.tab!=='live'||!gameHubFrame.getAttribute('src'))return;
+    try{const doc=gameHubFrame.contentDocument,content=doc?.querySelector('main.wrap');
+      const height=content?.getBoundingClientRect().bottom+(gameHubFrame.contentWindow?.scrollY||0);
+      if(Number.isFinite(height)&&height>=300)gameHubFrame.style.height=Math.ceil(height+12)+'px';
+    }catch(_){}
+  }
+  gameHubFrame.addEventListener('load',fitGameHub);
+  setInterval(fitGameHub,1000);
   $('legacyLive').addEventListener('toggle',()=>{if($('legacyLive').open&&document.body.dataset.tab==='live')loadLiveGames(false)});
   window.addEventListener('message',event=>{
     if(event.origin===location.origin&&event.source===gameHubFrame.contentWindow&&event.data?.type==='pp-game-hub-height'){
       const height=Number(event.data.height);
-      if(Number.isFinite(height)&&height>=300&&height<=120000)gameHubFrame.style.height=Math.ceil(height+4)+'px';
+      if(Number.isFinite(height)&&height>=300&&height<=120000)fitGameHub();
       return;
     }
     if(event.origin!==location.origin||!gameHubWindows.has(event.source)||event.data?.type!=='pp-game-auth-request'||typeof event.data.nonce!=='string'||!/^[-\w]{12,80}$/.test(event.data.nonce)||!document.body.classList.contains('connected'))return;
@@ -2284,10 +2314,25 @@ updateEVInputs();calculateEV();
   });
   renderBetLog();
   async function sentinelRun(){
+    const removedByTime=pruneFinishedBoard();
     const packs=[...sourceSnapshots.entries()].filter(([,pack])=>pack?.rows?.length);
-    if(!packs.length){$('sentinelStatus').textContent='No cached Board lines. Scan a source first; Sentinel does not create BettingPros rows.';return;}
+    if(!packs.length){render();$('sentinelStatus').textContent=removedByTime+' started/finished line(s) removed. No current cached Board lines; scan a source for new quotes.';return;}
     $('sentinelRun').disabled=true;
-    const all=packs.flatMap(([key,p])=>p.rows.map(r=>({...r,feed:snapshotSource(key,p)}))),counts={pass:0,skip:0,unverified:0};
+    let all=packs.flatMap(([key,p])=>p.rows.map(r=>({...r,feed:snapshotSource(key,p)})));
+    const groups=new Map();for(const r of all){const sport=sourceSport(r),day=gameDay(r),path=SCHEDULE_ESPN[sport];if(path&&day)groups.set(sport+':'+day,{path,day});}
+    const finishedKeys=new Set();let espnChecked=0;
+    await Promise.all([...groups.values()].map(async ({path,day})=>{
+      try{const res=await fetch(LIVE_ESPN+path+'/scoreboard?dates='+day.replace(/-/g,'')+'&limit=300',{cache:'no-store'});
+        if(!res.ok)return;const data=await res.json();if(!Array.isArray(data.events))return;espnChecked++;
+        const games=data.events.map(scheduleGame).filter(Boolean);
+        for(const r of all){if(gameDay(r)!==day||SCHEDULE_ESPN[sourceSport(r)]!==path)continue;
+          const game=scheduleRowMatch(r,games),event=game?data.events.find(e=>String(e.id)===String(game.id)):null;
+          if(event&&(event.status?.type?.completed===true||event.status?.type?.name==='STATUS_FINAL'))finishedKeys.add(rowKey(r));
+        }
+      }catch(_){} }));
+    const removedByESPN=pruneFinishedBoard(finishedKeys);
+    all=[...sourceSnapshots.entries()].flatMap(([key,p])=>p.rows.map(r=>({...r,feed:snapshotSource(key,p)})));
+    const counts={pass:0,skip:0,unverified:0};
     for(const r of all){const decision=screenRow(r);counts[decision.kind]++;sentinelEvidence.set(rowNoteKey(r),{at:Date.now(),message:'Cache audit: '+decision.kind.toUpperCase()+' — '+decision.why});}
     let exchangeMessage='Free exchange discovery disabled.';
     if($('sentinelFree').checked){
@@ -2306,7 +2351,7 @@ updateEVInputs();calculateEV();
     lastSentinelCheck=Date.now();render();
     let flagged=0;for(const leg of slipLegs){const match=all.find(r=>rowKey(r)===leg.key);if(!match||!screenRow(match).parlay||Date.now()-(match._cachedAt||0)>20*60*1000){leg.stale=true;flagged++;}}
     if(flagged)persistSlip();
-    $('sentinelStatus').textContent='Sentinel checked '+all.length+' cached lines: '+counts.pass+' PASS · '+counts.skip+' SKIP · '+counts.unverified+' UNVERIFIED. '+flagged+' draft legs flagged. '+exchangeMessage+' 0 BettingPros calls. Cached sportsbook prices are NOT refreshed. Refresh the source to obtain a current quote.';
+    $('sentinelStatus').textContent='Sentinel removed '+(removedByTime+removedByESPN)+' started/finished line(s) and checked '+all.length+' current cached lines: '+counts.pass+' PASS · '+counts.skip+' SKIP · '+counts.unverified+' UNVERIFIED. ESPN checked '+espnChecked+' scoreboard(s). '+flagged+' draft legs flagged. '+exchangeMessage+' 0 BettingPros calls. Cached sportsbook prices are NOT refreshed. Refresh the source to obtain a current quote.';
     $('sentinelRun').disabled=false;
   }
   // Sentinel diagnostics: read-only search of Kalshi and Polymarket US.
