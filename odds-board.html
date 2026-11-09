@@ -469,7 +469,8 @@
     <div class="sentinel-main">
       <button id="sentinelRun" type="button" class="primary">Sentinel · Clean cached Board</button>
       <label><input id="sentinelFree" type="checkbox" checked> Also search Kalshi + Polymarket US (free public listings)</label>
-      <span class="small-note">Uses already loaded lines; <strong>0 BettingPros requests</strong>. Checks your Settings, timestamps, and available evidence. Free exchange candidates are not treated as verified fair prices.</span>
+      <label><input id="sentinelBP" type="checkbox"> Recheck old BettingPros quotes (up to 10 page requests)</label>
+      <span class="small-note">Cached Board audit and ESPN checks are free. BettingPros recheck is optional and confirms cost before fetching; results may be partial. You can still draft and log old picks.</span>
     </div>
     <div class="small-note">Passing singles show by default. Regular singles need 52.5%+ cover and 3+ BettingPros stars. Turn on Feeling Lucky to allow qualified 45–&lt;52.5% cover picks as optional singles with the same star, EV, odds, stake and bankroll checks. The parlay lane remains 45–80% regardless of this toggle. Colors outside that lane are informational. Notes explain each decision.</div>
     <div id="sentinelStatus" class="small-note">Sentinel has not reviewed this cached Board yet. Load lines or restore a recent snapshot, then choose Clean cached Board.</div>
@@ -972,6 +973,8 @@ function referenceFairMap(game,market){
     finally{photoLookupInProgress=false;b.disabled=false;b.textContent='Refresh player photos (ESPN)';}
   }
   function rowKey(r){return [r.game,r.player,r.market,r.outcome,r.point].map(x=>String(x||'').trim().toLowerCase()).join('|');}
+  const QUOTE_MAX_AGE=20*60*1000;
+  function quoteAgeLabel(at){if(!Number.isFinite(at))return 'age unknown';const mins=Math.max(0,Math.floor((Date.now()-at)/60000));return mins<60?mins+'m old':Math.floor(mins/60)+'h '+mins%60+'m old';}
   const NOTE_STORE='augi.lineNotes.v064';
   const lineNotes=new Map(), sentinelEvidence=new Map();
   let lastSentinelCheck=null;
@@ -1157,10 +1160,11 @@ function referenceFairMap(game,market){
   try{const saved=JSON.parse(localStorage.getItem(PARLAY_LOG_KEY)||'[]');if(Array.isArray(saved))placedParlays=saved.filter(p=>p&&p.id&&Array.isArray(p.legs)&&Number.isFinite(p.stake));}catch(_){}
   function loadSlip(){try{const s=JSON.parse(localStorage.getItem('augi.slip.v060')||'[]');if(Array.isArray(s))slipLegs=s.slice(0,12).filter(x=>x&&typeof x==='object'&&x.game&&x.market&&x.outcome);}catch(_){}}
   function persistSlip(){try{localStorage.setItem('augi.slip.v060',JSON.stringify(slipLegs));localStorage.setItem('augi.syncDraftAt.v1',String(Date.now()));}catch(_){} renderSlip();syncSoon();}
-  function addSlip(r){const sc=r?screenRow(r):null;if(Date.now()-(r?._cachedAt||0)>20*60*1000){status('Refresh this price before adding it to a slip.','warn');return;}if(!sc?.parlay){status('This row is not an eligible 45–80% cover parlay leg at its current price.','warn');return;}
+  function addSlip(r){const sc=r?screenRow(r):null;if(!sc?.parlay){status('This row is not an eligible 45–80% cover parlay leg at its saved price.','warn');return;}
     if(slipLegs.some(x=>x.key===rowKey(r))){status('This exact line is already in your draft.','warn');return;}
     if(slipLegs.length>=12){status('Draft limit: 12 legs.','warn');return;}
-    slipLegs.push({key:rowKey(r),game:r.game,start:r.start||null,player:r.player,team:r.team||'',market:r.market,outcome:r.outcome,point:r.point,price:r.price,book:r.book,sport:sourceSport(r),source:lastMode,screen:sc.kind,cover:sc.math.fair,stale:false,result:'pending'});persistSlip();goTab('parlay');status('Added to parlay draft. Verify exact line on your chosen platform.','good');}
+    const stale=Date.now()-(r._cachedAt||0)>QUOTE_MAX_AGE;
+    slipLegs.push({key:rowKey(r),game:r.game,start:r.start||null,player:r.player,team:r.team||'',market:r.market,outcome:r.outcome,point:r.point,price:r.price,book:r.book,sport:sourceSport(r),source:lastMode,screen:sc.kind,cover:sc.math.fair,quoteAt:r._cachedAt||null,stale,result:'pending'});persistSlip();goTab('parlay');status(stale?'Added old quote ('+quoteAgeLabel(r._cachedAt)+'). Use Sentinel to recheck BettingPros and confirm the actual app line before placing.':'Added to parlay draft. Verify exact line on your chosen platform.',stale?'warn':'good');}
   const sourceSnapshots=new Map();
   function snapshotId(source,mode){
     const sport=source==='bp'?(mode==='bpGames'?$('bpGameSport').value:$('bpSport').value):source==='odds'?$('sport').value:source==='sgo'?$('sgoLeague').value:'all';
@@ -1179,7 +1183,7 @@ function referenceFairMap(game,market){
     }
   }
   const BOARD_CACHE_PREFIX='augi.boardCache.v090.';
-  const CACHE_FIELDS=['game','start','player','team','market','outcome','point','price','book','bookKey','books','ev','reference','modelProb','modelEv','mktProb','pairSum','stars','providerEventId','matchupVerified','scheduleSource','athleteEspnId','fantasyProsId','photoUrl','app','sport','_cachedAt'];
+  const CACHE_FIELDS=['game','start','player','team','market','outcome','point','price','book','bookKey','books','ev','reference','modelProb','modelEv','mktProb','pairSum','stars','providerEventId','providerMarketId','providerBookId','matchupVerified','scheduleSource','athleteEspnId','fantasyProsId','photoUrl','app','sport','_cachedAt'];
   function cacheStorageKey(){try{return BOARD_CACHE_PREFIX+new URL(baseUrl()).host;}catch{return null;}}
   function persistBoardCache(){const key=cacheStorageKey();if(!key)return;
     try{const packs=[...sourceSnapshots.entries()].slice(-32).map(([key,pack])=>({key,source:snapshotSource(key,pack),mode:pack.mode,at:pack.at,rows:pack.rows.slice(0,450).map(row=>Object.fromEntries(CACHE_FIELDS.filter(k=>row[k]!==undefined).map(k=>[k,row[k]])))})).filter(x=>x.rows.length);
@@ -1241,7 +1245,8 @@ function referenceFairMap(game,market){
     const parlayCount=eligible.filter(isParlayReview).length;
     const outlierCount=eligible.filter(r=>{const sc=screenRow(r);return sc.kind==='pass'&&sc.outlier;}).length;
     const luckyCount=eligible.filter(r=>screenRow(r).lucky).length;
-    $('screenSummary').textContent=counts.pass+' passing singles ('+outlierCount+' outliers'+($('feelingLucky').checked?', '+luckyCount+' Feeling Lucky':'')+') · '+counts.skip+' skipped · '+counts.unverified+' unverified · '+parlayCount+' parlay legs of '+eligible.length+' available rows'+(loggedCount?' · '+loggedCount+' already logged'+($('showLoggedPicks').checked?' shown':' hidden'):'');
+    const staleCount=eligible.filter(r=>Date.now()-(r._cachedAt||0)>QUOTE_MAX_AGE).length;
+    $('screenSummary').textContent=counts.pass+' passing singles ('+outlierCount+' outliers'+($('feelingLucky').checked?', '+luckyCount+' Feeling Lucky':'')+') · '+counts.skip+' skipped · '+counts.unverified+' unverified · '+parlayCount+' parlay legs of '+eligible.length+' available rows'+(staleCount?' · ⚠ '+staleCount+' quote(s) over 20m old: run Sentinel recheck':'')+(loggedCount?' · '+loggedCount+' already logged'+($('showLoggedPicks').checked?' shown':' hidden'):'');
     if(freshRows&&counts.pass===0&&counts.unverified>0&&$('screenView').value==='pass'){$('screenView').value='unverified';$('passesOnly').checked=false;}
     const topReasons=[...reasons].sort((a,b)=>b[1]-a[1]).slice(0,2).map(([reason,count])=>count+' · '+reason);
     const bpWithoutModel=eligible.some(r=>r.feed==='bp')&&!eligible.some(r=>r.feed==='bp'&&Number.isFinite(r.modelProb));
@@ -1257,7 +1262,7 @@ function referenceFairMap(game,market){
       const td=document.createElement('td');td.textContent=ev+' ';
       const flag=document.createElement('span');flag.className='line-state '+sc.kind;flag.textContent=sc.kind.toUpperCase();flag.title=sc.why+(r.reference?' · '+r.reference:'');td.append(flag);
       if(sc.math){const band=coverBand(sc.math.fair),chip=document.createElement('span');chip.className='cover-chip cover-'+band;chip.textContent=COVER_NAMES[band]+' · '+coverLabel(sc.math.fair);chip.title='Projected cover band; does not change eligibility by itself';td.append(chip);}
-      const oldQuote=Date.now()-(r._cachedAt||0)>20*60*1000;if(oldQuote){const age=document.createElement('span');age.className='line-state skip';age.textContent='RECHECK PRICE';age.title='Saved calculation; price older than 20 minutes. A placed single can still be logged with its actual odds and amount.';td.append(age);}tr.append(td);
+      const oldQuote=Date.now()-(r._cachedAt||0)>QUOTE_MAX_AGE;if(oldQuote){const age=document.createElement('span');age.className='line-state skip';age.textContent='STALE · '+quoteAgeLabel(r._cachedAt);age.title='Saved calculation and price. Sentinel can check BettingPros availability; you can still draft or log a bet with its actual app odds and amount.';td.append(age);}tr.append(td);
       if(sc.kind==='pass'&&sc.outlier){const tag=document.createElement('span');tag.className='line-state skip';tag.textContent='OUTLIER · $'+Number($('ruleOutlierStake').value).toFixed(2);tag.title='Outlier single stake, separate from your regular unit';td.append(tag);}
       if(sc.lucky){const tag=document.createElement('span');tag.className='line-state skip';tag.textContent='🍀 OPTIONAL SINGLE';tag.title='Feeling Lucky is on; this pick also remains eligible for the parlay draft';td.append(tag);}
       if(isSweetSpot(r,sc)){const tag=document.createElement('span');tag.className='sweet-badge';tag.textContent='🎯 SWEET SPOT';td.append(tag);}
@@ -1265,7 +1270,7 @@ function referenceFairMap(game,market){
       putCell(tr,stakeString(sc.stake));
       const act=document.createElement('td');
       if(sc.kind==='pass'){const single=document.createElement('button');single.type='button';single.className='smallbtn';single.textContent=oldQuote?'Log bet already placed':sc.lucky?'🍀 Lucky single · Log':'I placed this · Log';single.addEventListener('click',()=>openSingleEditor(r));act.append(single);}
-      if(sc.parlay){const add=document.createElement('button');add.type='button';add.className='smallbtn cover-chip cover-'+coverBand(sc.math.fair);add.textContent='+ Slip · '+COVER_NAMES[coverBand(sc.math.fair)]+' '+coverLabel(sc.math.fair);add.title='Add eligible leg to draft (no bet placed)';add.disabled=oldQuote;add.addEventListener('click',()=>addSlip(r));act.append(add);}
+      if(sc.parlay){const add=document.createElement('button');add.type='button';add.className='smallbtn cover-chip cover-'+coverBand(sc.math.fair);add.textContent='+ Slip · '+COVER_NAMES[coverBand(sc.math.fair)]+' '+coverLabel(sc.math.fair);add.title=oldQuote?'Old quote; draft remains available. Run Sentinel and verify in the app.':'Add eligible leg to draft (no bet placed)';add.addEventListener('click',()=>addSlip(r));act.append(add);}
       const detailBtn=document.createElement('button');detailBtn.className='smallbtn';detailBtn.type='button';detailBtn.style.marginLeft='5px';detailBtn.textContent='Notes';detailBtn.setAttribute('aria-expanded','false');act.append(detailBtn);
       const noteText=lineNotes.get(rowNoteKey(r));if(noteText){const mini=document.createElement('div');mini.className='note-mini';mini.textContent='Personal note saved';act.append(mini);}
       tr.append(act);[...tr.children].forEach((cell,i)=>cell.dataset.label=['Game / start','Player','Market','Outcome','Line','Best odds','Book / source','Books','BP rating','EV / Screen','Suggested stake','Actions / notes'][i]);frag.append(tr);
@@ -1468,13 +1473,13 @@ function referenceFairMap(game,market){
     }
     return parsed;
   }
-  function parseScreenProps(data){
+  function parseScreenProps(data,sport=$('bpSport').value){
     if(!data||!Array.isArray(data.props))throw Error('The screener route did not return a props list. Deploy the updated my-odds-worker.');
     return data.props.filter(p=>p&&Number.isFinite(p.odds)&&Number.isFinite(p.line)&&p.player).map(p=>({
       game:p.game||'Matchup pending · BP #'+(p.event_id??'?'),start:p.start||null,matchupVerified:Boolean(p.matchup_verified&&p.start),
       player:p.player,team:p.team||'',market:p.market||'Market '+p.market_id,outcome:p.side==='under'?'Under':'Over',
       point:propLine(p.line),price:p.odds,book:p.book||'Book '+p.book_id,bookKey:p.book||'Book '+p.book_id,books:1,
-      photoUrl:p.photo||null,athleteEspnId:p.espn_id||null,providerMarketId:p.market_id,providerEventId:p.event_id,sport:$('bpSport').value,
+      photoUrl:p.photo||null,athleteEspnId:p.espn_id||null,providerMarketId:p.market_id,providerBookId:p.book_id,providerEventId:p.event_id,sport,
       modelProb:Number.isFinite(p.prob)?p.prob:null,modelEv:Number.isFinite(p.ev)?p.ev:null,mktProb:Number.isFinite(p.mkt_prob)?p.mkt_prob:null,
       stars:p.rating,app:bpAppName(p.book),ev:null,reference:p.prob!=null?'BettingPros '+(p.ev_model||'model')+' at quoted side and line'+(p.mkt_prob!=null?' · consensus devig check':' · no consensus check'):'No BettingPros cover probability'
     }));
@@ -2058,13 +2063,13 @@ updateEVInputs();calculateEV();
     for(const [i,leg]of slipLegs.entries()){
       const item=document.createElement('div');item.className='slip-row'+(coverBand(leg.cover)?' cover-'+coverBand(leg.cover):'');const label=document.createElement('div');label.className='slip-label';
       const line=document.createElement('strong');line.textContent=(leg.player&&leg.player!=='—'?leg.player+' · ':'')+leg.market+' '+leg.outcome+(leg.point==='—'?'':' '+leg.point);
-      const meta=document.createElement('span');meta.className='sub';meta.textContent=leg.game+' · '+leg.book+' '+priceLabel(Number(leg.price))+' · '+leg.screen.toUpperCase()+(leg.stale?' · NEEDS RECHECK':'');
+      const meta=document.createElement('span');meta.className='sub';meta.textContent=leg.game+' · '+leg.book+' '+priceLabel(Number(leg.price))+' · '+leg.screen.toUpperCase()+(leg.quoteAt?' · quote '+quoteAgeLabel(leg.quoteAt):' · quote age unknown')+(leg.stale||Date.now()-(leg.quoteAt||0)>QUOTE_MAX_AGE?' · SENTINEL RECHECK ADVISED':'');
       label.append(line,meta);if(coverBand(leg.cover)){const chip=document.createElement('span');chip.className='cover-chip cover-'+coverBand(leg.cover);chip.textContent=COVER_NAMES[coverBand(leg.cover)]+' · '+coverLabel(leg.cover)+' cover';label.append(chip);}const del=document.createElement('button');del.className='smallbtn';del.textContent='Remove';del.addEventListener('click',()=>{slipLegs.splice(i,1);persistSlip();});item.append(label,del);host.append(item);
     }
     host.classList.remove(...COVER_NAMES.slice(1).map((_,i)=>'cover-'+(i+1)));if(slipLegs.length){const lowest=Math.min(...slipLegs.map(x=>Number.isFinite(x.cover)?x.cover:0));if(coverBand(lowest))host.classList.add('cover-'+coverBand(lowest));}
-    const stale=slipLegs.some(x=>x.stale),unknown=slipLegs.filter(x=>!coverBand(x.cover)).length;
+    const stale=slipLegs.some(x=>x.stale||Date.now()-(x.quoteAt||0)>QUOTE_MAX_AGE),unknown=slipLegs.filter(x=>!coverBand(x.cover)).length;
     $('slipResults').textContent=validStake&&validMult?'All-hit return $'+(stake*mult).toFixed(2)+' · net profit '+((stake*mult)-stake>=0?'+':'−')+'$'+Math.abs(stake*mult-stake).toFixed(2)+(Number.isFinite(partial)&&partial>0?' · user-entered partial return $'+partial.toFixed(2):''):'Enter a stake and the actual multiplier or payout quote from your app. No payout is invented.';
-    $('slipWarning').textContent=(stale?'⚠ One or more legs changed after a Sentinel check. Recheck the slip. ':'')+(unknown?unknown+' leg(s) have no independently confirmed positive EV. ':'')+(new Set(slipLegs.map(x=>x.game)).size<slipLegs.length?'Some legs share a game; their outcomes can be correlated. ':'')+'App payout, flex tiers, exact selection availability and same-sport rules must be verified in the app. Not an automated bet.';
+    $('slipWarning').textContent=(stale?'⚠ One or more saved quotes are over 20 minutes old or changed. Run Sentinel with BettingPros recheck, then confirm each line in the app. You can still log a bet already placed. ':'')+(unknown?unknown+' leg(s) have no independently confirmed positive EV. ':'')+(new Set(slipLegs.map(x=>x.game)).size<slipLegs.length?'Some legs share a game; their outcomes can be correlated. ':'')+'App payout, flex tiers, exact selection availability and same-sport rules must be verified in the app. Not an automated bet.';
   }
   function sourceSport(r){
     const raw=String(r.sport||((r.feed||view.source)==='odds'?$('sport').value:(r.feed||view.source)==='bp'?(lastMode==='bpGames'?$('bpGameSport').value:$('bpSport').value):(r.feed||view.source)==='sgo'?$('sgoLeague').value:''));
@@ -2379,16 +2384,51 @@ updateEVInputs();calculateEV();
   $('placeSlip').addEventListener('click',()=>{
     const stake=Number($('slipStake').value),multiplier=Number($('slipMultiplier').value),type=$('slipType').value,platform=$('slipApp').value;
     if(slipLegs.length<2||!Number.isFinite(stake)||stake<=0||!Number.isFinite(multiplier)||multiplier<=0){$('placeSlipMessage').textContent='Use at least two legs and enter the actual stake and all-hit multiplier from the app.';return;}
-    if(!window.confirm('Did you actually place this '+slipLegs.length+'-leg '+platform+' slip for '+money(stake)+' in the app? '+(slipLegs.some(x=>x.stale)?'Some draft lines need rechecking; log the actual placed slip only. ':'')+'This only saves your record.'))return;
+    if(!window.confirm('Did you actually place this '+slipLegs.length+'-leg '+platform+' slip for '+money(stake)+' in the app? '+(slipLegs.some(x=>x.stale||Date.now()-(x.quoteAt||0)>QUOTE_MAX_AGE)?'Some draft quotes are old or changed; log the actual placed slip only. ':'')+'This only saves your record.'))return;
     placedParlays.push({id:Date.now()+':'+Math.random().toString(36).slice(2),at:new Date().toISOString(),platform,type,stake:+stake.toFixed(2),multiplier,partialQuote:Number($('slipPartial').value)||null,ticket:$('slipTicket').value.trim(),result:'pending',payout:null,legs:slipLegs.map(x=>({...x,result:'pending',resultSource:null,actual:null,resultNote:''}))});
     slipLegs=[];persistSlip();$('slipTicket').value='';$('placeSlipMessage').textContent='Placed slip saved as Pending in Bet log.';persistParlays();goTab('betlog');
   });
   renderBetLog();
+  async function sentinelRecheckBP(packs){
+    const groups=new Map();let missingIds=0;
+    for(const [key,pack] of packs){if(snapshotSource(key,pack)!=='bp'||pack.mode!=='bp')continue;
+      for(const r of pack.rows){if(Date.now()-(r._cachedAt||0)<=QUOTE_MAX_AGE)continue;
+        const market=String(r.providerMarketId||key.split('|')[3]||''),event=String(r.providerEventId||''),sport=sourceSport(r),day=gameDay(r);
+        if(!/^\d+$/.test(market)||!/^\d+$/.test(event)||!sport||!day){missingIds++;continue;}
+        const id=[sport,day,market].join('|');if(!groups.has(id))groups.set(id,{sport,day,market,rows:[]});groups.get(id).rows.push(r);
+      }
+    }
+    const selected=[...groups.values()].sort((a,b)=>Math.min(...a.rows.map(r=>r._cachedAt||0))-Math.min(...b.rows.map(r=>r._cachedAt||0))).slice(0,5);
+    const deferred=groups.size-selected.length;
+    if(!selected.length)return 'No stale BettingPros rows with exact event and market IDs to recheck'+(missingIds?'; '+missingIds+' older cached row(s) need a new source scan for IDs':'')+'. 0 BettingPros calls.';
+    if(!window.confirm('Recheck '+selected.reduce((n,g)=>n+g.rows.length,0)+' stale BettingPros selections across '+selected.length+' sport/date/market group(s)?\n\nUp to '+selected.length*2+' BettingPros page requests (20 props per page), possibly fewer if the Worker has a cached response. Results may be partial; an absent selection will stay on the Board as unconfirmed. '+(deferred?deferred+' additional group(s) wait for the next recheck.':'')+' Continue?'))return 'BettingPros recheck cancelled; cached selections remain available. 0 BettingPros calls.';
+    let checked=0,matched=0,changed=0,unconfirmed=0,errors=0,actualPages=0;
+    for(const g of selected){
+      try{
+        const path='/props?sport='+encodeURIComponent(g.sport)+'&date='+encodeURIComponent(g.day)+'&market_id='+g.market+'&pages=2&ev_only=0';
+        const {data}=await request(path,'object');actualPages+=Number(data.pages_fetched)||0;
+        const current=parseScreenProps(data,g.sport),fetched=Date.parse(data._meta?.fetched_at||'');
+        for(const r of g.rows){checked++;
+          const same=current.find(n=>String(n.providerEventId)===String(r.providerEventId)&&String(n.providerMarketId)===String(r.providerMarketId)&&String(n.player).trim().toLowerCase()===String(r.player).trim().toLowerCase()&&n.outcome===r.outcome&&Number(n.point)===Number(r.point));
+          if(!same){unconfirmed++;sentinelEvidence.set(rowNoteKey({...r,feed:'bp'}),{at:Date.now(),message:'BettingPros recheck: exact selection not found in '+(Number(data.pages_fetched)||0)+' ranked page(s). Availability is unconfirmed; this partial result does not prove it was removed. Verify in the app or rescan the sport.'});continue;}
+          const beforePrice=r.price,beforeBook=r.book,previousNoteKey=rowNoteKey({...r,feed:'bp'});
+          Object.assign(r,{price:same.price,book:same.book,bookKey:same.bookKey,providerBookId:same.providerBookId,modelProb:same.modelProb,modelEv:same.modelEv,mktProb:same.mktProb,stars:same.stars,reference:same.reference,_cachedAt:Number.isFinite(fetched)?fetched:Date.now()});matched++;
+          const moved=beforePrice!==r.price||beforeBook!==r.book;if(moved)changed++;
+          if(lineNotes.has(previousNoteKey)&&!lineNotes.has(rowNoteKey({...r,feed:'bp'})))saveLineNote({...r,feed:'bp'},lineNotes.get(previousNoteKey));
+          sentinelEvidence.set(rowNoteKey({...r,feed:'bp'}),{at:Date.now(),message:'BettingPros recheck: exact event, market, player, side and line appeared in ranked results. '+(moved?'Best returned quote changed from '+beforeBook+' '+priceLabel(beforePrice)+' to '+r.book+' '+priceLabel(r.price)+'.':'Returned quote '+r.book+' '+priceLabel(r.price)+' is unchanged.')+' Worker quote time: '+new Date(r._cachedAt).toLocaleString()+'. Confirm the app before placing.'});
+          for(const leg of slipLegs){if(leg.key!==rowKey(r))continue;leg.stale=leg.stale||moved;leg.quoteAt=r._cachedAt;}
+        }
+      }catch(_){errors++;for(const r of g.rows)sentinelEvidence.set(rowNoteKey({...r,feed:'bp'}),{at:Date.now(),message:'BettingPros recheck failed for this sport/market; saved quote remains unchanged. Retry later or verify in the app.'});}
+    }
+    if(matched){for(const [key,pack]of packs){if(snapshotSource(key,pack)==='bp'&&pack.rows.some(r=>selected.some(g=>g.rows.includes(r))))pack.at=Date.now();}persistBoardCache();}if(slipLegs.length)persistSlip();
+    return 'BettingPros recheck: '+matched+' exact selection(s) returned ('+changed+' best quote changes), '+unconfirmed+' not confirmed in partial pages, '+errors+' group error(s), '+actualPages+' page(s) fetched; up to '+selected.length*2+' upstream requests (cache hits may use zero). '+(deferred?deferred+' group(s) deferred. ':'')+(missingIds?missingIds+' older row(s) lack IDs and need a fresh source scan. ':'')+'Unconfirmed rows remain available.';
+  }
   async function sentinelRun(){
     const removedByTime=pruneFinishedBoard();
     const packs=[...sourceSnapshots.entries()].filter(([,pack])=>pack?.rows?.length);
     if(!packs.length){render();$('sentinelStatus').textContent=removedByTime+' started/finished line(s) removed. No current cached Board lines; scan a source for new quotes.';return;}
     $('sentinelRun').disabled=true;
+    try{
     let all=packs.flatMap(([key,p])=>p.rows.map(r=>({...r,feed:snapshotSource(key,p)})));
     const groups=new Map();for(const r of all){const sport=sourceSport(r),day=gameDay(r),path=SCHEDULE_ESPN[sport];if(path&&day)groups.set(sport+':'+day,{path,day});}
     const finishedKeys=new Set();let espnChecked=0;
@@ -2419,11 +2459,14 @@ updateEVInputs();calculateEV();
       exchangeMessage=success+' of 2 free exchange feeds responded; '+markets.length+' sampled listings; '+candidates+' cached props have possible player-name matches (NOT verified).';
       if(!success)exchangeMessage='Free exchange listings unavailable; cached screening still completed. No BettingPros calls.';
     }
+    const bpMessage=$('sentinelBP').checked?await sentinelRecheckBP([...sourceSnapshots.entries()].filter(([,pack])=>pack?.rows?.length)):'0 BettingPros calls. Cached sportsbook prices were not refreshed; enable the optional recheck or scan the source.';
+    all=[...sourceSnapshots.entries()].flatMap(([key,p])=>p.rows.map(r=>({...r,feed:snapshotSource(key,p)})));
+    counts.pass=counts.skip=counts.unverified=0;for(const r of all)counts[screenRow(r).kind]++;
     lastSentinelCheck=Date.now();render();
     let flagged=0;for(const leg of slipLegs){const match=all.find(r=>rowKey(r)===leg.key);if(!match||!screenRow(match).parlay||Date.now()-(match._cachedAt||0)>20*60*1000){leg.stale=true;flagged++;}}
     if(flagged)persistSlip();
-    $('sentinelStatus').textContent='Sentinel removed '+(removedByTime+removedByESPN)+' started/finished line(s) and checked '+all.length+' current cached lines: '+counts.pass+' PASS · '+counts.skip+' SKIP · '+counts.unverified+' UNVERIFIED. ESPN checked '+espnChecked+' scoreboard(s). '+flagged+' draft legs flagged. '+exchangeMessage+' 0 BettingPros calls. Cached sportsbook prices are NOT refreshed. Refresh the source to obtain a current quote.';
-    $('sentinelRun').disabled=false;
+    $('sentinelStatus').textContent='Sentinel removed '+(removedByTime+removedByESPN)+' started/finished line(s) and checked '+all.length+' current cached lines: '+counts.pass+' PASS · '+counts.skip+' SKIP · '+counts.unverified+' UNVERIFIED. ESPN checked '+espnChecked+' scoreboard(s). '+flagged+' draft legs flagged. '+exchangeMessage+' '+bpMessage;
+    }catch(error){$('sentinelStatus').textContent='Sentinel interrupted: '+String(error.message||error)+'. Cached picks are still available.';}finally{$('sentinelRun').disabled=false;}
   }
   // Sentinel diagnostics: read-only search of Kalshi and Polymarket US.
   // The browser calls only our /exchange/* Worker routes. It does NOT call BettingPros.
