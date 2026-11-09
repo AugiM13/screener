@@ -1203,7 +1203,7 @@ function referenceFairMap(game,market){
     }
   }
   const BOARD_CACHE_PREFIX='augi.boardCache.v090.';
-  const CACHE_FIELDS=['game','start','player','team','market','outcome','point','price','book','bookKey','books','ev','reference','modelProb','modelEv','mktProb','pairSum','stars','providerEventId','providerMarketId','providerBookId','matchupVerified','scheduleSource','athleteEspnId','fantasyProsId','photoUrl','app','sport','_cachedAt'];
+  const CACHE_FIELDS=['game','start','player','team','market','outcome','point','price','book','bookKey','books','ev','reference','referenceProb','modelProb','modelEv','mktProb','pairSum','stars','providerEventId','providerMarketId','providerBookId','matchupVerified','scheduleSource','athleteEspnId','fantasyProsId','photoUrl','app','sport','_cachedAt'];
   function cacheStorageKey(){try{return BOARD_CACHE_PREFIX+new URL(baseUrl()).host;}catch{return null;}}
   function persistBoardCache(){const key=cacheStorageKey();if(!key)return;
     try{const packs=[...sourceSnapshots.entries()].slice(-32).map(([key,pack])=>({key,source:snapshotSource(key,pack),mode:pack.mode,at:pack.at,rows:pack.rows.slice(0,450).map(row=>Object.fromEntries(CACHE_FIELDS.filter(k=>row[k]!==undefined).map(k=>[k,row[k]])))})).filter(x=>x.rows.length);
@@ -1315,7 +1315,7 @@ function referenceFairMap(game,market){
           item.books.add(book.key||book.title||'Unknown');if(out.price>item.price){item.price=out.price;item.book=book.title||book.key||'Unknown';item.bookKey=book.key||'';}
         }
       }}
-      for(const i of unique.values())lines.push({game:gameName(game),start:game.commence_time,player:'—',sport:game.sport_key||$('sport').value,market:market==='outrights'?'Tournament winner':market==='h2h'?'Moneyline':market==='spreads'?'Spread':'Game total',outcome:i.outcome,point:pointLabel(i.pt),price:i.price,book:i.book,bookKey:i.bookKey,books:i.books.size,ev:i.bookKey==='pinnacle'?null:evOf(i.price,fair.get(JSON.stringify([i.outcome,i.pt]))),reference:'Pinnacle no-vig'});
+      for(const i of unique.values()){const referenceProb=i.bookKey==='pinnacle'?null:fair.get(JSON.stringify([i.outcome,i.pt]));lines.push({game:gameName(game),start:game.commence_time,player:'—',sport:game.sport_key||$('sport').value,market:market==='outrights'?'Tournament winner':market==='h2h'?'Moneyline':market==='spreads'?'Spread':'Game total',outcome:i.outcome,point:pointLabel(i.pt),price:i.price,book:i.book,bookKey:i.bookKey,books:i.books.size,referenceProb:Number.isFinite(referenceProb)?referenceProb:null,ev:null,reference:Number.isFinite(referenceProb)?'Pinnacle complete-market no-vig':'No exact Pinnacle reference'});}
     }
     lines.sort(sortLines);return {lines,gameCount};
   }
@@ -1323,6 +1323,21 @@ function referenceFairMap(game,market){
     if(!game||!Array.isArray(game.bookmakers))return [];
     const unique=new Map();
     const selected=new Set(String(market).split(','));
+    // A fair prop chance needs both sides at the same Pinnacle player, stat and line.
+    // One-sided, alternate, DFS and mismatched thresholds cannot be de-vigged.
+    const pinnacle=new Map();
+    for(const book of game.bookmakers){if(String(book.key||'').toLowerCase()!=='pinnacle')continue;
+      for(const m of(book.markets||[])){if(!selected.has(m.key))continue;
+        for(const out of(m.outcomes||[])){
+          const side=String(out.name||'').toLowerCase();
+          if(!['over','under'].includes(side)||!Number.isFinite(out.point)||!implied(out.price)||!String(out.description||'').trim())continue;
+          const key=JSON.stringify([m.key,normalName(out.description),out.point]);
+          if(!pinnacle.has(key))pinnacle.set(key,{});
+          const pair=pinnacle.get(key);if(pair[side]!==undefined)pair.ambiguous=true;
+          pair[side]=implied(out.price);
+        }
+      }
+    }
     for(const book of game.bookmakers){for(const m of(book.markets||[])){if(!selected.has(m.key))continue;
       for(const out of(m.outcomes||[])){
         if(!out||typeof out.name!=='string'||!Number.isFinite(out.price))continue;
@@ -1337,7 +1352,12 @@ function referenceFairMap(game,market){
         if(out.price>i.price){i.price=out.price;i.book=book.title||book.key||'Unknown';i.bookKey=book.key||'';}
       }
     }}
-    return [...unique.values()].map(i=>({game:gameName(game),start:game.commence_time,player:i.player,market:marketName(i.market),outcome:i.outcome,point:propLine(i.pt),price:i.price,book:i.book,bookKey:i.bookKey,books:i.books.size}));
+    return [...unique.values()].map(i=>{
+      const pair=pinnacle.get(JSON.stringify([i.market,normalName(i.player),i.pt]));
+      const side=String(i.outcome).toLowerCase(),total=(pair?.over||0)+(pair?.under||0);
+      const referenceProb=i.bookKey!=='pinnacle'&&!pair?.ambiguous&&['over','under'].includes(side)&&total>=1&&total<=1.25?pair[side]/total:null;
+      return {game:gameName(game),start:game.commence_time,player:i.player,sport:game.sport_key||$('sport').value,market:marketName(i.market),outcome:i.outcome,point:propLine(i.pt),price:i.price,book:i.book,bookKey:i.bookKey,books:i.books.size,referenceProb,reference:Number.isFinite(referenceProb)?'Pinnacle exact prop pair no-vig':'No exact Pinnacle prop pair'};
+    });
   }
   function sortLines(a,b){return Date.parse(a.start)-Date.parse(b.start)||a.game.localeCompare(b.game)||a.player.localeCompare(b.player)||a.outcome.localeCompare(b.outcome);}
   function applySportCatalog(data){
@@ -1745,7 +1765,7 @@ async function extraAction(kind){
       if(!window.confirm('Fetch up to '+limit+' '+league+' SportsGameOdds events? This uses provider requests unless cached.')){status('Scan cancelled.','warn');return;}
       const {data}=await request('/sgo/events?league='+encodeURIComponent(league)+'&limit='+limit+'&kind='+kindName,'object');
       if(!Array.isArray(data.rows))throw Error('SportsGameOdds returned no rows field.');
-      rows=data.rows.map(r=>({...r,point:pointLabel(r.point),ev:evOf(r.price,r.fairChance)}));lastMode='sgo';if(!rows.length)clearEmptyScan();render();
+      rows=data.rows.map(r=>({...r,point:pointLabel(r.point),referenceProb:Number.isFinite(r.fairChance)&&r.fairChance>0&&r.fairChance<1?r.fairChance:null,ev:null,reference:Number.isFinite(r.fairChance)?'SportsGameOdds fair odds at exact line':'No exact provider fair odds'}));lastMode='sgo';if(!rows.length)clearEmptyScan();render();
       metadata([String(data.eventCount)+' events',String(rows.length)+' quote rows',data.truncated?'Results capped at 700 rows':'',data.hasMore?'More provider pages exist':'']);
       status('SportsGameOdds scan loaded; estimates use provider fair odds only when exact lines match. Blank EV means insufficient comparison data.','good');
     }else if(kind==='sb'){
