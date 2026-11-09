@@ -2225,6 +2225,7 @@ updateEVInputs();calculateEV();
   }
   function photoAddLeg(data={}){
     const card=document.createElement('div');card.className='log-card photo-leg';
+    if(data.relativeToday)card.dataset.relativeToday='1';
     const title=document.createElement('strong');title.textContent='Selection '+(photoLegs.children.length+1);
     const grid=document.createElement('div');grid.className='grid';const fields={};
     for(const [key,label,type] of [['sport','League','select'],['day','Game date (Central)','date'],['team','Player team code (if shown)','text'],['game','Matchup (Away @ Home)','text'],['gameTime','Start time (Central)','time'],['player','Player','text'],['market','Exact market','text'],['outcome','Over / Under','select'],['point','Line (e.g. 1.5)','number']]){
@@ -2233,6 +2234,7 @@ updateEVInputs();calculateEV();
     }
     const remove=document.createElement('button');remove.type='button';remove.className='smallbtn';remove.textContent='Remove leg';remove.addEventListener('click',()=>card.remove());
     for(const key of ['sport','day','team','game'])fields[key].addEventListener('change',()=>{delete card.dataset.start;});
+    fields.day.addEventListener('input',()=>{delete card.dataset.dateFromPlaced;});
     card.append(title,grid,remove);card.photoFields=fields;photoLegs.append(card);
   }
   function photoGuess(text){
@@ -2274,6 +2276,15 @@ updateEVInputs();calculateEV();
     const sport=(text.match(/\b(NHL|NBA|NFL|MLB|WNBA|NCAAB|NCAAF)\b/i)||[])[1]?.toUpperCase()||(commonPair?.join(' ')==='SAS PHO'?'NBA':'');
     if(sport)for(const leg of legs)leg.sport=sport;
     if(commonPair&&legs.length===1||vsPair&&legs.length>0){for(const leg of legs){leg.game=commonPair[0]+' @ '+commonPair[1];if(gameTime)leg.gameTime=gameTime;}}
+    const dated=text.match(/\b(Mon|Tue|Wed|Thu|Fri|Sat|Sun)\s*(\d{1,2})[\/-](\d{1,2})(?:[\/-](\d{2,4}))?\b/i);
+    let detectedDay='';if(dated){const month=Number(dated[2]),day=Number(dated[3]),today=ctScheduleDay(0),thisYear=Number(today.slice(0,4));
+      const years=dated[4]?[Number(dated[4].length===2?'20'+dated[4]:dated[4])]:[thisYear-1,thisYear,thisYear+1];
+      const candidates=years.map(year=>new Date(Date.UTC(year,month-1,day))).filter(d=>d.getUTCFullYear()>=2000&&d.getUTCMonth()===month-1&&d.getUTCDate()===day&&d.toLocaleDateString('en-US',{weekday:'short',timeZone:'UTC'}).toLowerCase()===dated[1].toLowerCase());
+      const todayStamp=Date.parse(today.slice(0,4)+'-'+today.slice(4,6)+'-'+today.slice(6,8)+'T12:00:00Z');
+      candidates.sort((a,b)=>Math.abs(a.getTime()-todayStamp)-Math.abs(b.getTime()-todayStamp));
+      if(candidates.length&&(dated[4]||Math.abs(candidates[0].getTime()-todayStamp)<=180*86400000))detectedDay=candidates[0].toISOString().slice(0,10);
+    }
+    for(const leg of legs){if(detectedDay)leg.day=detectedDay;else if(/\bToday\b/i.test(text))leg.relativeToday=true;}
     return {app,stake,payout,legs:legs.slice(0,12),uncertain:!app||!legs.length||app==='DraftKings Pick6'||/to\s+win/i.test(lower)};
   }
   $('photoReadText').addEventListener('click',async()=>{
@@ -2292,9 +2303,13 @@ updateEVInputs();calculateEV();
   $('photoParse').addEventListener('click',()=>{
     const text=$('photoText').value.trim();if(!text){$('photoStatus').textContent='Read a screenshot or paste its text first.';return;}
     const guess=photoGuess(text);$('photoTicket').hidden=false;$('photoApp').value=guess.app;$('photoStake').value=guess.stake;$('photoReturn').value=guess.payout;$('photoPlaced').value='';photoLegs.replaceChildren();for(const leg of guess.legs)photoAddLeg(leg);if(!guess.legs.length)photoAddLeg();
-    $('photoStatus').textContent='Draft ticket filled. '+(guess.uncertain?'Some fields could not be identified. ':'')+'Choose dates, matchup and exact market for every leg. Check cost and TOTAL return against the app.';
+    $('photoStatus').textContent='Draft ticket filled. '+(guess.uncertain?'Some fields could not be identified. ':'')+(guess.legs.some(l=>l.relativeToday)?'This screenshot says “Today”: choose Date placed to fill its game date. ':'')+(guess.legs.some(l=>l.day)?'A visible game date was filled; check its year. ':'')+'Use each Game date field whenever the screenshot does not show a reliable date. Review the ticket before saving.';
   });
   $('photoAddLeg').addEventListener('click',()=>photoAddLeg());
+  $('photoPlaced').addEventListener('change',()=>{let filled=0;for(const card of photoLegs.children){if(card.dataset.relativeToday==='1'&&(!card.photoFields.day.value||card.photoFields.day.value===card.dataset.dateFromPlaced)){
+      card.photoFields.day.value=$('photoPlaced').value;card.dataset.dateFromPlaced=$('photoPlaced').value;filled++;}}
+    if(filled)$('photoStatus').textContent='Filled '+filled+' “Today” game date(s) from the placed date you chose. Check them against the screenshots before saving.';
+  });
   $('photoFindGames').addEventListener('click',async()=>{
     const button=$('photoFindGames');button.disabled=true;let matched=0,unmatched=0;
     try{for(const card of photoLegs.children){const f=card.photoFields,day=f.day.value,sport=f.sport.value;
