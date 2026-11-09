@@ -22,7 +22,7 @@
   input,select{width:100%;background:var(--panel);color:var(--ink);border:1px solid var(--rule);border-radius:8px;font:inherit;padding:10px 12px;min-height:44px}
   input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   button{font:inherit;font-weight:700;cursor:pointer;padding:10px 15px;border-radius:8px;border:1px solid var(--rule);color:var(--ink);background:var(--panel)}
-  button.primary{background:#087b44;border-color:#087b44;color:#fff}button.primary:hover:not(:disabled){background:#066339;border-color:#066339}button:disabled{opacity:.55;cursor:wait}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;align-items:center}
+  button.primary{background:#087b44;border-color:#087b44;color:#fff}button.primary:hover:not(:disabled){background:#066339;border-color:#066339}button:disabled{opacity:.55;cursor:not-allowed}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;align-items:center}
   .hint{font-size:12px;color:var(--muted);margin:10px 0 0}.status{padding:10px 12px;background:var(--page);border-radius:8px;min-height:44px;display:flex;align-items:center;gap:8px;white-space:pre-wrap;overflow-wrap:anywhere}
   .status.good{color:var(--good)}.status.bad{color:var(--red)}.status.warn{color:var(--warn)}
   .bar{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:12px}.bar h2{margin:0}
@@ -195,7 +195,7 @@
 <body>
 <div class="wrap">
   <header class="head">
-    <div><div class="eyebrow">Augi · Multi-source screener · Cloudflare</div><h1>Odds Board <span class="pill">v0.10.2 · BET RESULT STUDY</span></h1></div>
+    <div><div class="eyebrow">Augi · Multi-source screener · Cloudflare</div><h1>Odds Board <span class="pill">v0.10.3 · CACHED BET LOGGING</span></h1></div>
     <div class="head-right"><span class="chip">Log placed bets · no automatic betting</span><button id="syncIndicator" type="button" class="sync-indicator off" aria-label="Sync off. Open sync settings" hidden>Sync Off</button><nav id="appNav" aria-label="App navigation" hidden><button id="boardTab" class="nav-tab" type="button" aria-current="page">Board</button><button id="liveTab" class="nav-tab" type="button" aria-current="false">Live Games</button><button id="parlayTab" class="nav-tab" type="button" aria-current="false">Parlay <span id="parlayCount">0</span></button><button id="betLogTab" class="nav-tab" type="button" aria-current="false">Bet log</button><button id="settingsTab" class="nav-tab" type="button">Settings</button></nav></div>
   </header>
   <section class="panel login" id="connPanel" data-area="login" aria-labelledby="conn-label">
@@ -543,6 +543,24 @@
     <div class="bar"><h2 id="betlog-title">Bet log · Pending &amp; Results</h2><button type="button" class="primary" id="refreshBetResults">Refresh game results (ESPN · free)</button></div>
     <p class="small-note">Placed bets stay Pending until ESPN verifies a final game and exact stat. Refresh determines wins, losses and pushes. If ESPN cannot verify a market, it stays Pending with a reason. Enter the actual amount returned by your app when a winning or flex slip settles. Records are saved on this browser.</p>
     <div id="betRefreshStatus" class="status" role="status" aria-live="polite">No results checked yet.</div>
+    <details class="muted-box"><summary>Log a single you already placed</summary>
+      <p class="small-note">Use this if the Board quote became stale or the game disappeared before you could log it. Enter the exact bet from your app. A manual record starts Pending with no saved cover or EV prediction; it does not change the screen or place a wager.</p>
+      <div class="grid">
+        <div><label for="manualPlacedDate">Date placed (Central)</label><input id="manualPlacedDate" type="date"></div>
+        <div><label for="manualGameDate">Game date (Central)</label><input id="manualGameDate" type="date"></div>
+        <div><label for="manualSport">League</label><select id="manualSport"></select></div>
+        <div><label for="manualMatchup">Exact matchup</label><input id="manualMatchup" type="text" placeholder="Away team @ Home team"></div>
+        <div><label for="manualPlayer">Player</label><input id="manualPlayer" type="text"></div>
+        <div><label for="manualTeam">Player team (optional)</label><input id="manualTeam" type="text" placeholder="Team name or abbreviation"></div>
+        <div><label for="manualMarket">Market</label><input id="manualMarket" type="text" placeholder="Receptions, shots, assists…"></div>
+        <div><label for="manualOutcome">Pick</label><select id="manualOutcome"><option>Over</option><option>Under</option></select></div>
+        <div><label for="manualPoint">Line</label><input id="manualPoint" type="number" step="0.5" placeholder="1.5"></div>
+        <div><label for="manualBook">Actual book / app</label><input id="manualBook" type="text"></div>
+        <div><label for="manualOdds">Actual American odds</label><input id="manualOdds" type="number" step="1" placeholder="-110"></div>
+        <div><label for="manualStake">Amount paid ($)</label><input id="manualStake" type="number" min="0.01" step="0.01"></div>
+      </div>
+      <div class="actions"><button id="saveManualSingle" type="button" class="primary">Save placed single as Pending</button><span id="manualSingleStatus" class="hint" role="status"></span></div>
+    </details>
     <details class="muted-box"><summary>Import placed bets from a file</summary>
       <p class="small-note">Choose a private Odds Board bet-import JSON file. Review dates, amounts and apps before saving. Matching picks already logged for that game date are updated, preserving results and original cover snapshots. New tickets start Pending.</p>
       <label for="betImportFile">Bet import file</label><input id="betImportFile" type="file" accept=".json,application/json">
@@ -1095,12 +1113,12 @@ function referenceFairMap(game,market){
   function isParlayReview(r){return screenRow(r).parlay;}
   let singleSelection=null;
   function openSingleEditor(r){
-    if(Date.now()-(r._cachedAt||0)>20*60*1000){status('Refresh this price before logging a bet.','warn');return;}
     const sc=screenRow(r);if(sc.kind!=='pass'){status('This single no longer passes. Refresh the line and review its Notes.','warn');return;}
+    const stale=Date.now()-(r._cachedAt||0)>20*60*1000;
     singleSelection=r;$('singleEditor').hidden=false;
     $('singlePick').textContent=[r.player,r.market,r.outcome,r.point,r.game].filter(x=>x&&x!=='—').join(' · ')+' · projected cover '+coverLabel(sc.math.fair);
-    $('singleBook').value=r.book;$('singleOdds').value=r.price;$('singleStake').value=sc.stake.toFixed(2);
-    $('singleMessage').textContent=(sc.lucky?'Feeling Lucky · optional single. ':'')+'Enter the book, odds and amount you actually placed. Saving here does not submit a bet.';
+    $('singleBook').value=r.book;$('singleOdds').value=stale?'':r.price;$('singleStake').value=stale?'':sc.stake.toFixed(2);
+    $('singleMessage').textContent=(sc.lucky?'Feeling Lucky · optional single. ':'')+(stale?'This cached quote is over 20 minutes old. Enter the actual odds and amount from the bet you already placed; the old price is not a current recommendation. ':'Enter the book, odds and amount you actually placed. ')+'Saving here does not submit a bet.';
     $('saveSingle').dataset.confirm='';$('singleEditor').scrollIntoView({behavior:'smooth',block:'center'});
   }
   function renderSingleLog(){
@@ -1110,7 +1128,7 @@ function referenceFairMap(game,market){
     for(const entry of [...entries].reverse()){
       const row=document.createElement('div');row.className='log-card';const label=document.createElement('div');label.className='slip-label';
       const title=document.createElement('strong');title.textContent=[entry.player,entry.market,entry.outcome,entry.point].filter(x=>x&&x!=='—').join(' · ');
-      const meta=document.createElement('span');meta.className='sub';meta.textContent=placedPeriod(entry.at,'day')+' placed · '+entry.day+' game · '+entry.game+' · '+entry.book+' '+priceLabel(entry.odds)+' · $'+entry.stake.toFixed(2)+(entry.lucky?' · FEELING LUCKY':'')+(entry.outlier?' · OUTLIER':'')+' · '+(Number.isFinite(entry.netPct)?'net EV '+(entry.netPct>=0?'+':'')+entry.netPct.toFixed(2)+'%':'original model EV unknown')+(entry.offList?' · below current EV floor':'')+(Number.isFinite(entry.quotedPayout)?' · quoted return '+money(entry.quotedPayout):'');
+      const meta=document.createElement('span');meta.className='sub';meta.textContent=placedPeriod(entry.at,'day')+' placed · '+entry.day+' game · '+entry.game+' · '+entry.book+' '+priceLabel(entry.odds)+' · $'+entry.stake.toFixed(2)+(entry.lucky?' · FEELING LUCKY':'')+(entry.outlier?' · OUTLIER':'')+(entry.quoteStale?' · CACHED MODEL SNAPSHOT':'')+(entry.manual?' · MANUAL ENTRY':'')+' · '+(Number.isFinite(entry.netPct)?(entry.quoteStale?'cached-model net EV ':'net EV ')+(entry.netPct>=0?'+':'')+entry.netPct.toFixed(2)+'%':'original model EV unknown')+(entry.offList?' · below current EV floor':'')+(Number.isFinite(entry.quotedPayout)?' · quoted return '+money(entry.quotedPayout):'');
       label.append(title,meta,betResultBadge(entry));row.append(label);addSingleResultControls(entry,row);
       const remove=document.createElement('button');remove.type='button';remove.className='smallbtn';remove.textContent='Remove record';remove.addEventListener('click',()=>{if(!window.confirm('Remove this placed-bet record?'))return;placedSingles=placedSingles.filter(x=>x.id!==entry.id);persistSingles();});row.append(remove);host.append(row);
     }
@@ -1120,15 +1138,15 @@ function referenceFairMap(game,market){
   ['singleBook','singleOdds','singleStake'].forEach(id=>$(id).addEventListener('input',()=>{$('saveSingle').dataset.confirm='';}));
   $('saveSingle').addEventListener('click',()=>{
     const r=singleSelection;if(!r)return;
-    if(Date.now()-(r._cachedAt||0)>20*60*1000){$('singleMessage').textContent='This quote is over 20 minutes old. Refresh the source before logging.';return;}
+    const stale=Date.now()-(r._cachedAt||0)>20*60*1000;
     const book=$('singleBook').value.trim(),odds=Number($('singleOdds').value),stake=Number($('singleStake').value);
-    if(!book||implied(odds)==null||!Number.isFinite(stake)||stake<=0){$('singleMessage').textContent='Enter a book, valid American odds and an amount above $0.';return;}
+    if(!book||$('singleOdds').value===''||$('singleStake').value===''||implied(odds)==null||!Number.isFinite(stake)||stake<=0){$('singleMessage').textContent='Enter the actual book, valid American odds and amount paid above $0.';return;}
     if(screenRow(r).kind!=='pass'){$('singleMessage').textContent='The original recommendation changed or is no longer open. Refresh the Board first.';return;}
     const actual=kitMath(r,odds,book);if(!actual){$('singleMessage').textContent='Could not value these odds at the selected line.';return;}
     const floor=Number($('ruleNetFloor').value)/100,offList=actual.net<floor;
-    if(offList&&$('saveSingle').dataset.confirm!=='yes'){$('saveSingle').dataset.confirm='yes';$('singleMessage').textContent='Actual price is below the net EV floor ('+(actual.net*100).toFixed(2)+'%). Press Save again to record the placed bet as off-list.';return;}
+    if((offList||stale)&&$('saveSingle').dataset.confirm!=='yes'){$('saveSingle').dataset.confirm='yes';$('singleMessage').textContent=(stale?'Cached quote over 20 minutes old. Verify the actual app bet. ':'')+(offList?'At your actual price, estimated net EV is below the current floor ('+(actual.net*100).toFixed(2)+'%). ':'')+'Press Save again to record the bet you already placed.';return;}
     const decision=screenRow(r);
-    const entry={id:Date.now()+':'+Math.random().toString(36).slice(2),key:rowKey(r),day:gameDay(r),game:r.game,player:r.player,team:r.team||'',market:r.market,outcome:r.outcome,point:r.point,book,odds,stake:+stake.toFixed(2),netPct:actual.net*100,offList,outlier:decision.outlier,lucky:decision.lucky,cover:actual.fair,stars:r.stars??null,sweet:isSweetSpot({...r,price:odds},decision),at:new Date().toISOString(),start:r.start||null,sport:sourceSport(r),result:'pending',payout:null};
+    const entry={id:Date.now()+':'+Math.random().toString(36).slice(2),key:rowKey(r),day:gameDay(r),game:r.game,player:r.player,team:r.team||'',market:r.market,outcome:r.outcome,point:r.point,book,odds,stake:+stake.toFixed(2),netPct:actual.net*100,offList,outlier:decision.outlier,lucky:decision.lucky,cover:actual.fair,stars:r.stars??null,sweet:isSweetSpot({...r,price:odds},decision),quoteStale:stale,quoteAt:r._cachedAt||null,at:new Date().toISOString(),start:r.start||null,sport:sourceSport(r),result:'pending',payout:null};
     placedSingles.push(entry);singleSelection=null;$('singleEditor').hidden=true;persistSingles();goTab('betlog');
   });
   renderSingleLog();
@@ -1239,14 +1257,14 @@ function referenceFairMap(game,market){
       const td=document.createElement('td');td.textContent=ev+' ';
       const flag=document.createElement('span');flag.className='line-state '+sc.kind;flag.textContent=sc.kind.toUpperCase();flag.title=sc.why+(r.reference?' · '+r.reference:'');td.append(flag);
       if(sc.math){const band=coverBand(sc.math.fair),chip=document.createElement('span');chip.className='cover-chip cover-'+band;chip.textContent=COVER_NAMES[band]+' · '+coverLabel(sc.math.fair);chip.title='Projected cover band; does not change eligibility by itself';td.append(chip);}
-      const oldQuote=Date.now()-(r._cachedAt||0)>20*60*1000;if(oldQuote){const age=document.createElement('span');age.className='line-state skip';age.textContent='RECHECK PRICE';age.title='Saved calculation; price older than 20 minutes. Refresh before logging or drafting.';td.append(age);}tr.append(td);
+      const oldQuote=Date.now()-(r._cachedAt||0)>20*60*1000;if(oldQuote){const age=document.createElement('span');age.className='line-state skip';age.textContent='RECHECK PRICE';age.title='Saved calculation; price older than 20 minutes. A placed single can still be logged with its actual odds and amount.';td.append(age);}tr.append(td);
       if(sc.kind==='pass'&&sc.outlier){const tag=document.createElement('span');tag.className='line-state skip';tag.textContent='OUTLIER · $'+Number($('ruleOutlierStake').value).toFixed(2);tag.title='Outlier single stake, separate from your regular unit';td.append(tag);}
       if(sc.lucky){const tag=document.createElement('span');tag.className='line-state skip';tag.textContent='🍀 OPTIONAL SINGLE';tag.title='Feeling Lucky is on; this pick also remains eligible for the parlay draft';td.append(tag);}
       if(isSweetSpot(r,sc)){const tag=document.createElement('span');tag.className='sweet-badge';tag.textContent='🎯 SWEET SPOT';td.append(tag);}
       if(modelEv!==null&&Number.isFinite(net)){const sub=document.createElement('span');sub.className='sub';sub.textContent='BP model '+(modelEv>=0?'+':'')+modelEv.toFixed(2)+'% · cover '+coverLabel(sc.math?.fair);td.append(sub);}
       putCell(tr,stakeString(sc.stake));
       const act=document.createElement('td');
-      if(sc.kind==='pass'){const single=document.createElement('button');single.type='button';single.className='smallbtn';single.textContent=sc.lucky?'🍀 Lucky single · Log':'I placed this · Log';single.disabled=oldQuote;single.addEventListener('click',()=>openSingleEditor(r));act.append(single);}
+      if(sc.kind==='pass'){const single=document.createElement('button');single.type='button';single.className='smallbtn';single.textContent=oldQuote?'Log bet already placed':sc.lucky?'🍀 Lucky single · Log':'I placed this · Log';single.addEventListener('click',()=>openSingleEditor(r));act.append(single);}
       if(sc.parlay){const add=document.createElement('button');add.type='button';add.className='smallbtn cover-chip cover-'+coverBand(sc.math.fair);add.textContent='+ Slip · '+COVER_NAMES[coverBand(sc.math.fair)]+' '+coverLabel(sc.math.fair);add.title='Add eligible leg to draft (no bet placed)';add.disabled=oldQuote;add.addEventListener('click',()=>addSlip(r));act.append(add);}
       const detailBtn=document.createElement('button');detailBtn.className='smallbtn';detailBtn.type='button';detailBtn.style.marginLeft='5px';detailBtn.textContent='Notes';detailBtn.setAttribute('aria-expanded','false');act.append(detailBtn);
       const noteText=lineNotes.get(rowNoteKey(r));if(noteText){const mini=document.createElement('div');mini.className='note-mini';mini.textContent='Personal note saved';act.append(mini);}
@@ -2204,6 +2222,21 @@ updateEVInputs();calculateEV();
       placedSingles=s.entries;placedParlays=p.entries;logSelectedDate=selected[0].date.value;logVisibleMonth=logSelectedDate.slice(0,7);$('logAllDates').checked=false;
       renderBetLog();render();syncSoon();$('betImportStatus').textContent='Saved to calendar: '+(s.added+p.added)+' new tickets; '+(s.updated+p.updated)+' matching tickets updated. New tickets are Pending. '+(syncState.on?'Sync is scheduled.':'Turn on sync to copy them to your other device.');$('betImportApply').hidden=true;betImportRows=[];
     }catch(e){$('betImportStatus').textContent='Import not saved: '+e.message;}
+  });
+  const manualSport=$('manualSport'),manualToday=placedPeriod(new Date().toISOString(),'day');
+  for(const sport of ['',...TRACK_LEAGUES]){const option=document.createElement('option');option.value=sport;option.textContent=sport||'Choose league';manualSport.append(option);}
+  $('manualPlacedDate').value=manualToday;$('manualGameDate').value=manualToday;
+  $('saveManualSingle').addEventListener('click',()=>{
+    const message=$('manualSingleStatus'),placedDate=$('manualPlacedDate').value,day=$('manualGameDate').value;
+    const sport=manualSport.value,game=$('manualMatchup').value.trim(),player=$('manualPlayer').value.trim(),team=$('manualTeam').value.trim(),market=$('manualMarket').value.trim(),outcome=$('manualOutcome').value;
+    const point=$('manualPoint').value.trim(),book=$('manualBook').value.trim(),oddsText=$('manualOdds').value.trim(),stakeText=$('manualStake').value.trim();
+    const odds=oddsText===''?null:Number(oddsText),stake=Number(stakeText);
+    if(!validImportDate(placedDate)||!validImportDate(day)||!sport||!game||!player||!market||!['Over','Under'].includes(outcome)||point===''||!Number.isFinite(Number(point))||!book||stakeText===''||!Number.isFinite(stake)||stake<=0||oddsText!==''&&implied(odds)===null){message.textContent='Enter both dates, league, exact matchup, player, market, side, line, app and amount. If entered, American odds must be valid.';return;}
+    const pick={game,player,market,outcome,point},key=rowKey(pick);
+    if(placedSingles.some(e=>e.key===key&&e.day===day)){message.textContent='This exact pick is already in Bet Log for that game date. Review the existing record instead.';return;}
+    const entry={id:Date.now()+':'+Math.random().toString(36).slice(2),key,day,game,player,team,market,outcome,point,book,odds,stake:+stake.toFixed(2),netPct:null,cover:null,stars:null,manual:true,at:placedDate+'T12:00:00-06:00',atPrecision:'date',start:null,sport,result:'pending',payout:null,resultNote:'Manually logged after placement. Original cover and EV were not saved.'};
+    placedSingles.push(entry);logSelectedDate=placedDate;logVisibleMonth=placedDate.slice(0,7);$('logAllDates').checked=false;persistSingles();
+    message.textContent='Saved as Pending on '+placedDate+'. Refresh ESPN results when the game is final. Original cover and EV remain Unknown.';
   });
   function renderCoverStudy(){
     const isLeg=$('studyType').value==='leg',scope=$('studyScope').value,entries=[];
