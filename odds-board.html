@@ -2510,7 +2510,9 @@ updateEVInputs();calculateEV();
     else if(/assist/.test(market))specs=[sport==='NHL'?['A','AST']:['AST']];
     else if(/block/.test(market))specs=[sport==='NHL'?['BLK','BS']:['BLK']];
     else if(/steal/.test(market))specs=[['STL']];
-    else if(/shot/.test(market))specs=[sport==='NHL'?['SOG','SHOTS']:[]];
+    // ESPN's NHL skater box score uses S for shots on goal. SOG is a separate
+    // shootout-goals column and is 0 even when the player took several shots.
+    else if(/shot/.test(market))specs=[sport==='NHL'?['S','SHOTS']:[]];
     else if(/saves?/.test(market))specs=[['SV','SAVES']];
     else if(/goals?/.test(market))specs=[['G','GOALS']];
     else if(/points?|\bpts\b/.test(market))specs=[['PTS']];
@@ -2560,7 +2562,10 @@ updateEVInputs();calculateEV();
   }
   async function refreshBetResults(){
     const button=$('refreshBetResults');button.disabled=true;$('betRefreshStatus').textContent='Checking final games and exact player stats…';
-    const pending=[...placedSingles.filter(e=>(e.result||'pending')==='pending'&&e.resultSource!=='manual'),...placedParlays.flatMap(p=>p.resultSource==='manual'?[]:p.legs.filter(e=>(e.result||'pending')==='pending'&&e.resultSource!=='manual'))];
+    // Recheck previously ESPN-graded NHL shots too: older versions read ESPN's
+    // shootout-goals (SOG) column as shots and recorded false losses at 0.
+    const needsCheck=e=>e.resultSource!=='manual'&&((e.result||'pending')==='pending'||(e.resultSource==='ESPN'&&e.sport==='NHL'&&/shot/i.test(e.market||'')));
+    const pending=[...placedSingles.filter(needsCheck),...placedParlays.flatMap(p=>['manual','app return'].includes(p.resultSource)?[]:p.legs.filter(needsCheck))];
     const scoreboards=new Map(),summaries=new Map();let graded=0,unmatched=0,errors=0;
     try{
       for(const entry of pending){
@@ -2582,10 +2587,11 @@ updateEVInputs();calculateEV();
           }
           const grade=gradeFinalPick(entry,event,summary);
           if(!grade){entry.resultNote='Final game found, but exact stat or market is unavailable; confirm in your app.';unmatched++;continue;}
+          const previousResult=entry.result,previousPayout=entry.payout;
           Object.assign(entry,grade,{resultSource:'ESPN',settledAt:new Date().toISOString()});
           if(grade.result==='lost')entry.payout=0;
           else if(grade.result==='push')entry.payout=entry.stake??null;
-          else entry.payout=null;
+          else entry.payout=previousResult==='won'&&Number.isFinite(previousPayout)&&!entry.payoutNote?previousPayout:null;
           graded++;
         }catch(_){entry.resultNote='ESPN lookup failed; retry later. Result stays Pending.';errors++;}
       }
